@@ -161,6 +161,29 @@ export const LearnLensDiagnostic: React.FC = () => {
 
   const formattedSeconds = (elapsedMs / 1000).toFixed(1);
 
+  if (loadingData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-[#8266F0]" />
+        <p className="text-sm font-semibold text-neutral-500">Loading diagnostic parameters...</p>
+      </div>
+    );
+  }
+
+  if (challenges.length === 0 || !activeChallenge.id) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-4">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <h3 className="text-xl font-bold text-[#141414] dark:text-white mb-2">No Diagnostics Found</h3>
+        <p className="text-[#6B6B6B] dark:text-slate-400 max-w-md">
+          The database is currently empty. Please add diagnostic challenges to Firestore or seed the platform to begin.
+        </p>
+      </div>
+    );
+  }
+
   // Filter matched resources for active challenge
   const matchedResources = resources.filter(
     (res) => res.discipline === activeChallenge.discipline

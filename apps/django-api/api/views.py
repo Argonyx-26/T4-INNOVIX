@@ -410,3 +410,26 @@ class FirebaseConfigView(APIView):
         return Response(getattr(settings, "FIREBASE_WEB_CONFIG", {}), status=status.HTTP_200_OK)
 
 
+class LibrarySearchView(APIView):
+    """
+    GET /api/library/search/?q=[topic]
+    Uses Gemini AI (via ai_engine generators) to find highly relevant multi-format
+    learning resources. Falls back gracefully on 503 Overload errors.
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        query = request.query_params.get("q", "").strip()
+        if not query:
+            return Response([], status=status.HTTP_200_OK)
+            
+        try:
+            from ai_engine.generators import generate_library_resources
+        except ImportError:
+            from packages.ai_engine.generators import generate_library_resources
+            
+        resources = generate_library_resources(query)
+        return Response(resources, status=status.HTTP_200_OK)
+
+

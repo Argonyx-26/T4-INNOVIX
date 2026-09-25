@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Navbar } from "./components/Navbar";
-import { Footer } from "./components/Footer";
 import { ModeToggleWidget } from "./components/ModeToggleWidget";
 import { ReadingRuler } from "./components/ReadingRuler";
 import { LandingPage } from "./pages/LandingPage";
@@ -16,16 +15,19 @@ import { MisconceptionCenter } from "./pages/MisconceptionCenter";
 import { DiagnosticReport } from "./pages/DiagnosticReport";
 import { StudyPlan } from "./pages/StudyPlan";
 import { StudentSettings } from "./pages/StudentSettings";
+import { SelfStudy } from "./pages/SelfStudy";
 import { VoiceAssistantModal } from "./components/modals/VoiceAssistantModal";
 import { SearchModal } from "./components/modals/SearchModal";
 import { CourseModal } from "./components/modals/CourseModal";
 import { LoginModal } from "./components/modals/LoginModal";
 import { useThemeMode } from "./context/ThemeModeContext";
+import { useAuth } from "./context/AuthContext";
 import { Course } from "./types";
 import { Info, CheckCircle2, AlertTriangle, X } from "lucide-react";
 
 export const App: React.FC = () => {
   const { toast, dismissToast } = useThemeMode();
+  const { isAuthenticated, role } = useAuth();
 
   // Route State via Hash
   const [currentHash, setCurrentHash] = useState<string>(() => {
@@ -94,6 +96,8 @@ export const App: React.FC = () => {
         return <EducationalResourceLibrary />;
       case "#settings":
         return <StudentSettings />;
+      case "#self-study":
+        return <SelfStudy />;
       case "#teacher":
         return <TeacherInsightsView initialTab="overview" />;
       case "#teacher-triage":
@@ -108,6 +112,13 @@ export const App: React.FC = () => {
         return <TeacherInsightsView initialTab="rag-chatbot" />;
       case "#home":
       default:
+        if (isAuthenticated) {
+          if (role === "teacher") {
+            return <TeacherInsightsView initialTab="overview" />;
+          } else {
+            return <StudentDashboard onNavigate={navigateTo} />;
+          }
+        }
         return (
           <LandingPage
             onSelectCourse={setSelectedCourse}
@@ -134,9 +145,6 @@ export const App: React.FC = () => {
       <main className="flex-1">
         {renderActiveView()}
       </main>
-
-      {/* Global Footer */}
-      <Footer />
 
       {/* Floating Mode Toggle Widget (z-[45]) */}
       <ModeToggleWidget />

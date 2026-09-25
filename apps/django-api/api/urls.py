@@ -9,6 +9,7 @@ from api.views import (
     ContractSchemaView,
     FirebaseConfigView,
     TeacherTriageFeedView,
+    LibrarySearchView,
 )
 
 app_name = "api"
@@ -20,4 +21,5 @@ urlpatterns = [
     path("config/firebase/", FirebaseConfigView.as_view(), name="firebase-config"),
     path("teacher/triage-alerts/", TeacherTriageFeedView.as_view(), name="teacher-triage-alerts"),
     path("teacher/class-heatmap/", ClassHeatmapView.as_view(), name="teacher-class-heatmap"),
+    path("library/search/", LibrarySearchView.as_view(), name="library-search"),
 ]

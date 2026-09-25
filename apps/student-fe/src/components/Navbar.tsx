@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full transition-colors duration-200 border-b border-black/5 bg-[#EFEFEE] dark:bg-[#17171B] site-header" ref={dropdownRef}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-8 lg:px-12 xl:px-16 h-20 flex items-center justify-between">
         
         {/* Brand Logo & Context Indicator */}
         <div className="flex items-center space-x-3">
@@ -114,285 +114,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center space-x-1">
-          {isTeacher ? (
-            /* TEACHER WORKSPACE NAVIGATION (Section 25) */
-            <>
-              <a
-                href="#teacher"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#teacher"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4 opacity-75" />
-                <span>Overview</span>
-              </a>
+        {/* Desktop Navigation - Condensed into a Dropdown */}
 
-              <a
-                href="#teacher-triage"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#teacher-triage"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <Activity className="w-4 h-4 opacity-75 text-rose-500" />
-                <span>Live Triage</span>
-                <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-rose-500 text-white">Live</span>
-              </a>
-
-              <a
-                href="#teacher-students"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#teacher-students"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <Users className="w-4 h-4 opacity-75" />
-                <span>Students</span>
-              </a>
-
-              <a
-                href="#teacher-analytics"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#teacher-analytics"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <BarChart3 className="w-4 h-4 opacity-75" />
-                <span>Analytics</span>
-              </a>
-
-              <a
-                href="#teacher-interventions"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#teacher-interventions"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <Target className="w-4 h-4 opacity-75" />
-                <span>Interventions</span>
-              </a>
-
-              <a
-                href="#teacher-intelligence"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#teacher-intelligence"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <MessageSquare className="w-4 h-4 opacity-75 text-[#EC4899]" />
-                <span>RAG Chatbot</span>
-                <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-[#EC4899] text-white">Vector</span>
-              </a>
-            </>
-          ) : (
-            /* STUDENT INTENT NAVIGATION (Section 5) */
-            <>
-              {/* Dashboard */}
-              <a
-                href="#student"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#student"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4 opacity-75" />
-                <span>Dashboard</span>
-              </a>
-
-              {/* Learn Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => toggleDropdown("learn")}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1 ${
-                    ["#courses", "#paths"].includes(activeHash) || activeDropdown === "learn"
-                      ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                      : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                  }`}
-                >
-                  <BookOpen className="w-4 h-4 opacity-75" />
-                  <span>Learn</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${activeDropdown === "learn" ? "rotate-180" : ""}`} />
-                </button>
-
-                {activeDropdown === "learn" && (
-                  <div className="absolute top-full left-0 mt-2 w-52 bg-white dark:bg-[#1E1E24] rounded-2xl shadow-2xl border border-black/10 dark:border-white/10 p-2 space-y-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <a
-                      href="#courses"
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 transition ${
-                        activeHash === "#courses" ? "bg-[#8266F0]/10 text-[#8266F0]" : "text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <BookOpen className="w-4 h-4 text-[#8266F0]" />
-                      <div>
-                        <div className="font-bold">Courses</div>
-                        <div className="text-[10px] text-neutral-400">Curriculum Explorer</div>
-                      </div>
-                    </a>
-                    <a
-                      href="#paths"
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 transition ${
-                        activeHash === "#paths" ? "bg-[#8266F0]/10 text-[#8266F0]" : "text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <GraduationCap className="w-4 h-4 text-[#EC4899]" />
-                      <div>
-                        <div className="font-bold">Learning Paths</div>
-                        <div className="text-[10px] text-neutral-400">Mastery Sequences</div>
-                      </div>
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Practice Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => toggleDropdown("practice")}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1 ${
-                    ["#diagnostic", "#pacing"].includes(activeHash) || activeDropdown === "practice"
-                      ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                      : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                  }`}
-                >
-                  <Target className="w-4 h-4 opacity-75" />
-                  <span>Practice</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${activeDropdown === "practice" ? "rotate-180" : ""}`} />
-                </button>
-
-                {activeDropdown === "practice" && (
-                  <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-[#1E1E24] rounded-2xl shadow-2xl border border-black/10 dark:border-white/10 p-2 space-y-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <a
-                      href="#diagnostic"
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition ${
-                        activeHash === "#diagnostic" ? "bg-[#8266F0]/10 text-[#8266F0]" : "text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5">
-                        <Sparkles className="w-4 h-4 text-[#8266F0]" />
-                        <div>
-                          <div className="font-bold">AI Diagnostic</div>
-                          <div className="text-[10px] text-neutral-400">Root-Cause Challenge</div>
-                        </div>
-                      </div>
-                      <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-[#EC4899] text-white">Live</span>
-                    </a>
-                    <a
-                      href="#pacing"
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 transition ${
-                        activeHash === "#pacing" ? "bg-[#8266F0]/10 text-[#8266F0]" : "text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <Flame className="w-4 h-4 text-amber-500" />
-                      <div>
-                        <div className="font-bold">Adaptive Learning</div>
-                        <div className="text-[10px] text-neutral-400">Velocity & Acceleration</div>
-                      </div>
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* My Learning Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => toggleDropdown("mylearning")}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1 ${
-                    ["#misconceptions", "#diagnostic-results", "#plan"].includes(activeHash) || activeDropdown === "mylearning"
-                      ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                      : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                  }`}
-                >
-                  <Activity className="w-4 h-4 opacity-75" />
-                  <span>My Learning</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${activeDropdown === "mylearning" ? "rotate-180" : ""}`} />
-                </button>
-
-                {activeDropdown === "mylearning" && (
-                  <div className="absolute top-full left-0 mt-2 w-60 bg-white dark:bg-[#1E1E24] rounded-2xl shadow-2xl border border-black/10 dark:border-white/10 p-2 space-y-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <a
-                      href="#misconceptions"
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition ${
-                        activeHash === "#misconceptions" ? "bg-[#8266F0]/10 text-[#8266F0]" : "text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5">
-                        <Activity className="w-4 h-4 text-rose-500" />
-                        <div>
-                          <div className="font-bold">Misconception Center</div>
-                          <div className="text-[10px] text-neutral-400">Longitudinal Tracker</div>
-                        </div>
-                      </div>
-                      <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-[#8266F0] text-white">Core</span>
-                    </a>
-                    <a
-                      href="#diagnostic-results"
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 transition ${
-                        activeHash === "#diagnostic-results" ? "bg-[#8266F0]/10 text-[#8266F0]" : "text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <FileText className="w-4 h-4 text-emerald-500" />
-                      <div>
-                        <div className="font-bold">Diagnostic Reports</div>
-                        <div className="text-[10px] text-neutral-400">Post-Assessment Review</div>
-                      </div>
-                    </a>
-                    <a
-                      href="#plan"
-                      className={`p-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2.5 transition ${
-                        activeHash === "#plan" ? "bg-[#8266F0]/10 text-[#8266F0]" : "text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <Calendar className="w-4 h-4 text-[#8266F0]" />
-                      <div>
-                        <div className="font-bold">Study Plan</div>
-                        <div className="text-[10px] text-neutral-400">Daily Agenda & Saved</div>
-                      </div>
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Resources */}
-              <a
-                href="#library"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#library"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <Library className="w-4 h-4 opacity-75" />
-                <span>Resources</span>
-              </a>
-
-              {/* Mentors */}
-              <a
-                href="#mentors"
-                className={`px-3 py-2 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 ${
-                  activeHash === "#mentors"
-                    ? "text-[#8266F0] bg-[#8266F0]/10 font-bold"
-                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5"
-                }`}
-              >
-                <Users className="w-4 h-4 opacity-75" />
-                <span>Mentors</span>
-              </a>
-            </>
-          )}
-        </nav>
 
         {/* Global Action Header Items */}
         <div className="flex items-center space-x-2 sm:space-x-3">
+
           {/* Search Trigger */}
           <button
             onClick={onOpenSearch}
@@ -476,22 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </div>
 
-                  {/* 1-Tap Role Switcher */}
-                  <button
-                    onClick={() => {
-                      switchRole(isTeacher ? "student" : "teacher");
-                      setProfileDropdownOpen(false);
-                    }}
-                    className="w-full p-2.5 rounded-xl bg-[#8266F0]/10 hover:bg-[#8266F0]/15 text-[#8266F0] text-xs font-bold transition flex items-center justify-between"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <ArrowLeftRight className="w-4 h-4" />
-                      <span>Switch to {isTeacher ? "Student View" : "Faculty Portal"}</span>
-                    </div>
-                    <span className="text-[10px] uppercase font-mono bg-white dark:bg-black/30 px-1.5 py-0.5 rounded">
-                      Role
-                    </span>
-                  </button>
+
 
                   <a
                     href="#settings"
@@ -525,6 +237,121 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Desktop Menu Dropdown */}
+          <div className="hidden lg:block relative">
+            <button
+              onClick={() => toggleDropdown("desktop_menu")}
+              className={`p-2 rounded-xl transition flex items-center space-x-2 ${
+                activeDropdown === "desktop_menu"
+                  ? "bg-black/5 dark:bg-white/5 text-[#141414] dark:text-white"
+                  : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+              }`}
+              title="Main Menu"
+            >
+              <Menu className="w-5 h-5" />
+              <span className="hidden xl:inline text-sm font-semibold pr-1">Menu</span>
+            </button>
+
+            {activeDropdown === "desktop_menu" && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-[#1E1E24] rounded-2xl shadow-2xl border border-black/10 dark:border-white/10 p-2 space-y-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {isTeacher ? (
+                  <>
+                    <a href="#teacher" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <LayoutDashboard className="w-4 h-4 text-neutral-500" />
+                      <span>Overview</span>
+                    </a>
+                    <a href="#teacher-triage" onClick={() => setActiveDropdown(null)} className="flex items-center justify-between p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <div className="flex items-center space-x-3">
+                        <Activity className="w-4 h-4 text-rose-500" />
+                        <span>Live Triage</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white">Live</span>
+                    </a>
+                    <a href="#teacher-students" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <Users className="w-4 h-4 text-neutral-500" />
+                      <span>Students</span>
+                    </a>
+                    <a href="#teacher-analytics" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <BarChart3 className="w-4 h-4 text-neutral-500" />
+                      <span>Analytics</span>
+                    </a>
+                    <a href="#teacher-interventions" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <Target className="w-4 h-4 text-neutral-500" />
+                      <span>Interventions</span>
+                    </a>
+                    <a href="#teacher-intelligence" onClick={() => setActiveDropdown(null)} className="flex items-center justify-between p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <div className="flex items-center space-x-3">
+                        <MessageSquare className="w-4 h-4 text-[#EC4899]" />
+                        <span>RAG Chatbot</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[#EC4899] text-white">Vector</span>
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <a href="#student" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <LayoutDashboard className="w-4 h-4 text-neutral-500" />
+                      <span>Dashboard</span>
+                    </a>
+                    <div className="h-px bg-black/5 dark:bg-white/5 my-1" />
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">Learn</div>
+                    <a href="#courses" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <BookOpen className="w-4 h-4 text-[#8266F0]" />
+                      <span>Courses</span>
+                    </a>
+                    <a href="#paths" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <GraduationCap className="w-4 h-4 text-[#EC4899]" />
+                      <span>Learning Paths</span>
+                    </a>
+                    <a href="#self-study" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <BookOpenCheck className="w-4 h-4 text-[#10B981]" />
+                      <span>Self Study</span>
+                    </a>
+                    <div className="h-px bg-black/5 dark:bg-white/5 my-1" />
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">Practice</div>
+                    <a href="#diagnostic" onClick={() => setActiveDropdown(null)} className="flex items-center justify-between p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <div className="flex items-center space-x-3">
+                        <Sparkles className="w-4 h-4 text-[#8266F0]" />
+                        <span>AI Diagnostic</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[#EC4899] text-white">Live</span>
+                    </a>
+                    <a href="#pacing" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <Flame className="w-4 h-4 text-amber-500" />
+                      <span>Adaptive Learning</span>
+                    </a>
+                    <div className="h-px bg-black/5 dark:bg-white/5 my-1" />
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">My Learning</div>
+                    <a href="#misconceptions" onClick={() => setActiveDropdown(null)} className="flex items-center justify-between p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <div className="flex items-center space-x-3">
+                        <Activity className="w-4 h-4 text-rose-500" />
+                        <span>Misconception Center</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[#8266F0] text-white">Core</span>
+                    </a>
+                    <a href="#diagnostic-results" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <FileText className="w-4 h-4 text-emerald-500" />
+                      <span>Diagnostic Reports</span>
+                    </a>
+                    <a href="#plan" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <Calendar className="w-4 h-4 text-[#8266F0]" />
+                      <span>Study Plan</span>
+                    </a>
+                    <div className="h-px bg-black/5 dark:bg-white/5 my-1" />
+                    <a href="#library" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <Library className="w-4 h-4 text-neutral-500" />
+                      <span>Resources</span>
+                    </a>
+                    <a href="#mentors" onClick={() => setActiveDropdown(null)} className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/5">
+                      <Users className="w-4 h-4 text-neutral-500" />
+                      <span>Mentors</span>
+                    </a>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Mobile Drawer Trigger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -539,25 +366,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-black/5 bg-[#EFEFEE] dark:bg-[#17171B] px-4 pt-3 pb-6 space-y-3 max-h-[85vh] overflow-y-auto">
-          {/* Quick Role Switcher Bar on Mobile */}
-          {user && (
-            <button
-              onClick={() => {
-                switchRole(isTeacher ? "student" : "teacher");
-                setMobileMenuOpen(false);
-              }}
-              className="w-full p-3 rounded-2xl bg-gradient-to-r from-[#8266F0]/15 to-[#EC4899]/15 border border-[#8266F0]/20 flex items-center justify-between text-xs font-bold text-neutral-800 dark:text-white"
-            >
-              <div className="flex items-center space-x-2">
-                <ArrowLeftRight className="w-4 h-4 text-[#8266F0]" />
-                <span>Switch to {isTeacher ? "Student View" : "Faculty Portal"}</span>
-              </div>
-              <span className="text-[10px] uppercase font-bold text-[#8266F0]">
-                {role}
-              </span>
-            </button>
-          )}
-
           {isTeacher ? (
             /* TEACHER MOBILE MENU */
             <div className="space-y-1">
@@ -631,6 +439,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <GraduationCap className="w-4 h-4 text-[#EC4899]" />
                   <span>Learning Paths</span>
+                </a>
+                <a
+                  href="#self-study"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center space-x-3 p-2.5 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-black/5"
+                >
+                  <BookOpenCheck className="w-4 h-4 text-[#10B981]" />
+                  <span>Self Study</span>
                 </a>
               </div>
 

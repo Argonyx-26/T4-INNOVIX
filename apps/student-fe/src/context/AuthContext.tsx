@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
 
   // Helper with strict timeout to prevent Firestore network hangs from blocking authentication
-  const firestoreTimeout = <T,>(promise: Promise<T>, timeoutMs = 1500): Promise<T> => {
+  const firestoreTimeout = <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
     return Promise.race([
       promise,
       new Promise<T>((_, reject) =>
@@ -83,10 +83,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       lastLogin: new Date().toISOString(),
     };
 
-    // 2. Best-effort Firestore sync (timeout after 1500ms so auth never hangs)
+    // 2. Best-effort Firestore sync (timeout so auth never hangs)
     try {
       const userRef = doc(db, "users", fbUser.uid);
-      const userSnap = await firestoreTimeout(getDoc(userRef), 1500);
+      const userSnap = await firestoreTimeout(getDoc(userRef));
 
       if (userSnap && userSnap.exists()) {
         const data = userSnap.data();
@@ -106,11 +106,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         // Background update without blocking authentication return
-        firestoreTimeout(updateDoc(userRef, { lastLogin: mergedProfile.lastLogin }), 1200).catch(() => {});
+        firestoreTimeout(updateDoc(userRef, { lastLogin: mergedProfile.lastLogin })).catch(() => {});
         return mergedProfile;
       } else {
         // Background write without blocking authentication return
-        firestoreTimeout(setDoc(userRef, baseProfile), 1200).catch(() => {});
+        firestoreTimeout(setDoc(userRef, baseProfile)).catch(() => {});
         return baseProfile;
       }
     } catch (err) {
