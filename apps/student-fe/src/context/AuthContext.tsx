@@ -52,88 +52,119 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Helper to fetch or create user in Firestore
+  // Helper with strict timeout to prevent Firestore network hangs from blocking authentication
+  const firestoreTimeout = <T,>(promise: Promise<T>, timeoutMs = 1500): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`Firestore request timed out after ${timeoutMs}ms`)), timeoutMs)
+      ),
+    ]);
+  };
+
+  // Helper to fetch or create user in Firestore with non-blocking resilience
   const syncUserWithFirestore = async (
     fbUser: FirebaseUser, 
     assignedRole?: UserRole, 
     extraData?: Partial<UserProfile>
   ): Promise<UserProfile> => {
+    // 1. Immediately create guaranteed base profile from authenticated Firebase user
+    const baseProfile: UserProfile = {
+      uid: fbUser.uid,
+      email: fbUser.email || extraData?.email || "",
+      displayName: fbUser.displayName || extraData?.displayName || (assignedRole === "teacher" ? "Prof. Educator" : "Eduvia Learner"),
+      role: assignedRole || extraData?.role || (fbUser.email?.includes("prof") || fbUser.email?.includes("teacher") ? "teacher" : "student"),
+      photoURL: fbUser.photoURL || extraData?.photoURL || "",
+      institution: extraData?.institution || (assignedRole === "teacher" ? "Eduvia Faculty Institute" : "Eduvia Academy"),
+      academicTier: extraData?.academicTier || "School (K-12)",
+      department: extraData?.department || (assignedRole === "teacher" ? "Cognitive Pedagogies & AI" : ""),
+      enrolledCourses: ["course-linear-equations", "course-quadratic-mastery"],
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+    };
+
+    // 2. Best-effort Firestore sync (timeout after 1500ms so auth never hangs)
     try {
       const userRef = doc(db, "users", fbUser.uid);
-      const userSnap = await getDoc(userRef);
+      const userSnap = await firestoreTimeout(getDoc(userRef), 1500);
 
-      if (userSnap.exists()) {
+      if (userSnap && userSnap.exists()) {
         const data = userSnap.data();
-        const profile: UserProfile = {
+        const mergedProfile: UserProfile = {
+          ...baseProfile,
+          ...data,
           uid: fbUser.uid,
-          email: fbUser.email || data.email || "",
-          displayName: fbUser.displayName || data.displayName || "Eduvia Learner",
-          role: assignedRole || data.role || "student",
-          photoURL: fbUser.photoURL || data.photoURL || "",
-          institution: data.institution || "Eduvia Academy",
-          academicTier: data.academicTier || "School (K-12)",
-          department: data.department || "",
-          enrolledCourses: data.enrolledCourses || ["course-linear-equations"],
-          createdAt: data.createdAt || new Date().toISOString(),
+          email: fbUser.email || data.email || baseProfile.email,
+          displayName: fbUser.displayName || data.displayName || baseProfile.displayName,
+          role: assignedRole || data.role || baseProfile.role,
+          photoURL: fbUser.photoURL || data.photoURL || baseProfile.photoURL,
+          institution: data.institution || baseProfile.institution,
+          academicTier: data.academicTier || baseProfile.academicTier,
+          department: data.department || baseProfile.department,
+          enrolledCourses: data.enrolledCourses || baseProfile.enrolledCourses,
           lastLogin: new Date().toISOString(),
         };
 
-        // Update lastLogin
-        await updateDoc(userRef, { lastLogin: new Date().toISOString() });
-        return profile;
+        // Background update without blocking authentication return
+        firestoreTimeout(updateDoc(userRef, { lastLogin: mergedProfile.lastLogin }), 1200).catch(() => {});
+        return mergedProfile;
       } else {
-        // Create new document in Firestore DB
-        const newProfile: UserProfile = {
-          uid: fbUser.uid,
-          email: fbUser.email || "",
-          displayName: fbUser.displayName || extraData?.displayName || "Eduvia User",
-          role: assignedRole || "student",
-          photoURL: fbUser.photoURL || "",
-          institution: extraData?.institution || "Eduvia Global Campus",
-          academicTier: extraData?.academicTier || "School (K-12)",
-          department: extraData?.department || (assignedRole === "teacher" ? "STEM & Computer Science" : ""),
-          enrolledCourses: ["course-linear-equations"],
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-        };
-
-        await setDoc(userRef, newProfile);
-        return newProfile;
+        // Background write without blocking authentication return
+        firestoreTimeout(setDoc(userRef, baseProfile), 1200).catch(() => {});
+        return baseProfile;
       }
     } catch (err) {
-      console.warn("Firestore sync fallback to local profile:", err);
-      // Fallback in case firestore is unreachable or rules restricted
-      return {
-        uid: fbUser.uid,
-        email: fbUser.email || "",
-        displayName: fbUser.displayName || extraData?.displayName || "Eduvia User",
-        role: assignedRole || "student",
-        photoURL: fbUser.photoURL || "",
-        academicTier: "School (K-12)",
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      };
+      console.warn("[AuthContext] Firestore sync skipped (offline or not yet provisioned):", err);
+      return baseProfile;
     }
   };
 
   // Subscribe to Firebase Auth state
   useEffect(() => {
+    let isMounted = true;
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const profile = await syncUserWithFirestore(firebaseUser);
-        setUser(profile);
-        localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(profile));
-      } else {
-        // If no firebaseUser and no local demo user, clear
-        if (!user || (!user.uid.startsWith("student_demo") && !user.uid.startsWith("teacher_demo"))) {
-          setUser(null);
-          localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
+      try {
+        if (firebaseUser) {
+          const profile = await syncUserWithFirestore(firebaseUser);
+          if (isMounted) {
+            setUser(profile);
+            localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(profile));
+          }
+        } else {
+          // If no firebaseUser and no local demo user, clear
+          if (isMounted) {
+            const saved = localStorage.getItem(LOCAL_STORAGE_USER_KEY);
+            if (saved) {
+              try {
+                const parsed = JSON.parse(saved);
+                if (parsed.uid?.includes("demo")) {
+                  setUser(parsed);
+                } else {
+                  setUser(null);
+                  localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
+                }
+              } catch {
+                setUser(null);
+                localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
+              }
+            } else {
+              setUser(null);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[AuthContext] Error in onAuthStateChanged:", e);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // 1. Email Login
@@ -211,13 +242,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         lastLogin: new Date().toISOString(),
       };
 
-      // Best effort write to Firestore to keep DB populated
-      try {
-        const userRef = doc(db, "users", demoProfile.uid);
-        await setDoc(userRef, demoProfile, { merge: true });
-      } catch (e) {
-        console.warn("Demo profile local fallback:", e);
-      }
+      // Best-effort non-blocking write to Firestore to keep DB populated
+      const userRef = doc(db, "users", demoProfile.uid);
+      firestoreTimeout(setDoc(userRef, demoProfile, { merge: true }), 1000).catch(() => {});
 
       setUser(demoProfile);
       localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(demoProfile));
@@ -245,12 +272,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(updated);
     localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(updated));
 
-    try {
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, { role: newRole });
-    } catch (e) {
-      console.warn("Could not persist role switch to Firestore:", e);
-    }
+    // Best-effort non-blocking update
+    const userRef = doc(db, "users", user.uid);
+    firestoreTimeout(updateDoc(userRef, { role: newRole }), 1000).catch(() => {});
   };
 
   return (

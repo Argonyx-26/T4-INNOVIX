@@ -81,8 +81,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       );
       onClose();
     } catch (err: any) {
+      console.error("[LoginModal] Google Auth Error:", err);
       if (err.code === "auth/popup-closed-by-user") {
-        setErrorMessage("Google Sign-In popup was closed before completing.");
+        setErrorMessage("Google Sign-In window was closed before completing.");
+      } else if (err.code === "auth/popup-blocked") {
+        setErrorMessage("Pop-up window was blocked by your browser. Please allow popups for localhost:3000 or use Email/Demo login below.");
+      } else if (err.code === "auth/unauthorized-domain") {
+        setErrorMessage(`Domain '${window.location.hostname}' is not authorized in Firebase. Please add '${window.location.hostname}' to Firebase Console > Authentication > Settings > Authorized domains.`);
+      } else if (err.code === "auth/operation-not-allowed") {
+        setErrorMessage("Google Sign-In provider is disabled in Firebase Console. Please enable Google under Authentication > Sign-in method.");
+      } else if (err.code === "auth/cancelled-popup-request") {
+        setErrorMessage("Only one Google Sign-In pop-up can be opened at a time.");
       } else {
         setErrorMessage(err.message || "Failed to sign in with Google OAuth.");
       }
@@ -122,18 +131,25 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         const newUser = await registerWithEmail(email, password, name, selectedRole, academicTier);
         showToast(
           "Account Created Successfully",
-          `Welcome to Eduvia, ${newUser.displayName}! Your ${selectedRole} profile has been initialized in Firestore DB.`,
+          `Welcome to Eduvia, ${newUser.displayName}! Your ${selectedRole} profile has been initialized.`,
           "success"
         );
         onClose();
       }
     } catch (err: any) {
+      console.error("[LoginModal] Email Auth Error:", err);
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        setErrorMessage("Invalid email or password. Please check your credentials or try Demo Login below.");
+        setErrorMessage("Invalid email or password. If you don't have an account yet, switch to 'Create Account' above or try 1-Click Demo Login below.");
       } else if (err.code === "auth/email-already-in-use") {
-        setErrorMessage("An account with this email already exists. Please switch to Log In.");
+        setErrorMessage("An account with this email already exists. Please switch to the 'Log In' tab.");
       } else if (err.code === "auth/weak-password") {
         setErrorMessage("Password is too weak. Please use at least 6 characters.");
+      } else if (err.code === "auth/invalid-email") {
+        setErrorMessage("Please enter a valid email address.");
+      } else if (err.code === "auth/operation-not-allowed") {
+        setErrorMessage("Email/Password authentication is disabled in Firebase console. Please enable it under Authentication > Sign-in method.");
+      } else if (err.code === "auth/network-request-failed") {
+        setErrorMessage("Network error: Could not reach Firebase servers. Please verify your connection.");
       } else {
         setErrorMessage(err.message || "Authentication failed. Please try again.");
       }

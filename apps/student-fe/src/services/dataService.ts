@@ -2,7 +2,8 @@
  * LearnLens & Eduvia Dynamic Data Service
  * 
  * Fetches, synchronizes, and caches application data directly from Firebase Firestore.
- * Automatically seeds initial collections if the remote Firestore database is empty.
+ * Features resilient timeout protection to ensure instant fallback if remote Firestore 
+ * is offline or not yet provisioned in Google Cloud console.
  */
 
 import { 
@@ -13,8 +14,7 @@ import {
   doc, 
   updateDoc, 
   query, 
-  where,
-  onSnapshot
+  where
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { 
@@ -37,6 +37,16 @@ import {
   MOCK_REMEDIAL_PODS 
 } from "../data/mockStudentTelemetry";
 
+// Strict timeout helper to guard against unprovisioned Firestore hanging requests
+const dbTimeout = <T,>(promise: Promise<T>, timeoutMs = 1200): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Database query timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+};
+
 // In-memory cache to guarantee sub-millisecond response times
 let cachedCourses: Course[] | null = null;
 let cachedResources: EducationalResource[] | null = null;
@@ -58,7 +68,7 @@ export const dataService = {
 
     try {
       const coursesCol = collection(db, "courses");
-      const snapshot = await getDocs(coursesCol);
+      const snapshot = await dbTimeout(getDocs(coursesCol), 1200);
 
       if (!snapshot.empty) {
         const liveCourses: Course[] = snapshot.docs.map((docSnap) => ({
@@ -69,10 +79,9 @@ export const dataService = {
         return liveCourses;
       }
 
-      // If Firestore collection is empty, automatically seed initial courses
-      console.log("[DataService] Seeding initial courses into Firestore...");
+      // If Firestore collection is empty, seed initial courses in background
       for (const course of MOCK_COURSES) {
-        await setDoc(doc(db, "courses", course.id), course);
+        dbTimeout(setDoc(doc(db, "courses", course.id), course), 1000).catch(() => {});
       }
 
       cachedCourses = MOCK_COURSES;
@@ -94,7 +103,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "resources");
-      const snapshot = await getDocs(colRef);
+      const snapshot = await dbTimeout(getDocs(colRef), 1200);
 
       if (!snapshot.empty) {
         const liveResources: EducationalResource[] = snapshot.docs.map((docSnap) => ({
@@ -105,10 +114,9 @@ export const dataService = {
         return liveResources;
       }
 
-      // Auto-seed resources if empty
-      console.log("[DataService] Seeding initial resources into Firestore...");
+      // Auto-seed resources in background
       for (const res of MOCK_EDUCATIONAL_RESOURCES) {
-        await setDoc(doc(db, "resources", res.id), res);
+        dbTimeout(setDoc(doc(db, "resources", res.id), res), 1000).catch(() => {});
       }
 
       cachedResources = MOCK_EDUCATIONAL_RESOURCES;
@@ -130,7 +138,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "instructors");
-      const snapshot = await getDocs(colRef);
+      const snapshot = await dbTimeout(getDocs(colRef), 1200);
 
       if (!snapshot.empty) {
         const liveInstructors: Instructor[] = snapshot.docs.map((docSnap) => ({
@@ -141,10 +149,9 @@ export const dataService = {
         return liveInstructors;
       }
 
-      // Auto-seed instructors
-      console.log("[DataService] Seeding initial instructors into Firestore...");
+      // Auto-seed instructors in background
       for (const inst of MOCK_INSTRUCTORS) {
-        await setDoc(doc(db, "instructors", inst.id), inst);
+        dbTimeout(setDoc(doc(db, "instructors", inst.id), inst), 1000).catch(() => {});
       }
 
       cachedInstructors = MOCK_INSTRUCTORS;
@@ -166,7 +173,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "challenges");
-      const snapshot = await getDocs(colRef);
+      const snapshot = await dbTimeout(getDocs(colRef), 1200);
 
       if (!snapshot.empty) {
         const liveChallenges: ConceptChallenge[] = snapshot.docs.map((docSnap) => ({
@@ -177,10 +184,9 @@ export const dataService = {
         return liveChallenges;
       }
 
-      // Auto-seed challenges
-      console.log("[DataService] Seeding initial challenges into Firestore...");
+      // Auto-seed challenges in background
       for (const ch of UNIVERSAL_CHALLENGES) {
-        await setDoc(doc(db, "challenges", ch.id), ch);
+        dbTimeout(setDoc(doc(db, "challenges", ch.id), ch), 1000).catch(() => {});
       }
 
       cachedChallenges = UNIVERSAL_CHALLENGES;
@@ -199,7 +205,7 @@ export const dataService = {
     try {
       const colRef = collection(db, "misconceptions");
       const q = studentId ? query(colRef, where("studentId", "==", studentId)) : colRef;
-      const snapshot = await getDocs(q);
+      const snapshot = await dbTimeout(getDocs(q), 1200);
 
       if (!snapshot.empty) {
         const liveLogs: StudentMisconceptionRecord[] = snapshot.docs.map((docSnap) => ({
@@ -210,13 +216,12 @@ export const dataService = {
         return liveLogs;
       }
 
-      // Auto-seed initial misconception logs
-      console.log("[DataService] Seeding initial misconceptions into Firestore...");
+      // Auto-seed initial misconception logs in background
       for (const log of MOCK_STUDENT_MISCONCEPTION_LOGS) {
-        await setDoc(doc(db, "misconceptions", log.id), {
+        dbTimeout(setDoc(doc(db, "misconceptions", log.id), {
           ...log,
           studentId: studentId || "st-priya-01",
-        });
+        }), 1000).catch(() => {});
       }
 
       cachedMisconceptions = MOCK_STUDENT_MISCONCEPTION_LOGS;
@@ -231,13 +236,13 @@ export const dataService = {
   async updateMisconceptionStatus(id: string, status: MisconceptionStatus): Promise<void> {
     try {
       const docRef = doc(db, "misconceptions", id);
-      await updateDoc(docRef, {
+      dbTimeout(updateDoc(docRef, {
         status,
         lastAttempt: new Date().toISOString().replace("T", " ").substring(0, 16),
         ...(status === "Resolved" ? { resolutionTimestamp: new Date().toISOString() } : {}),
-      });
+      }), 1200).catch(() => {});
 
-      // Update in-memory cache
+      // Update in-memory cache immediately
       if (cachedMisconceptions) {
         cachedMisconceptions = cachedMisconceptions.map((item) =>
           item.id === id ? { ...item, status } : item
@@ -258,7 +263,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "student_telemetry");
-      const snapshot = await getDocs(colRef);
+      const snapshot = await dbTimeout(getDocs(colRef), 1200);
 
       if (!snapshot.empty) {
         const liveTelemetry: StudentTelemetryProfile[] = snapshot.docs.map((docSnap) => ({
@@ -269,10 +274,9 @@ export const dataService = {
         return liveTelemetry;
       }
 
-      // Auto-seed student telemetry
-      console.log("[DataService] Seeding initial student telemetry into Firestore...");
+      // Auto-seed student telemetry in background
       for (const profile of MOCK_STUDENT_PROFILES) {
-        await setDoc(doc(db, "student_telemetry", profile.id), profile);
+        dbTimeout(setDoc(doc(db, "student_telemetry", profile.id), profile), 1000).catch(() => {});
       }
 
       cachedTelemetry = MOCK_STUDENT_PROFILES;
@@ -294,7 +298,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "remedial_pods");
-      const snapshot = await getDocs(colRef);
+      const snapshot = await dbTimeout(getDocs(colRef), 1200);
 
       if (!snapshot.empty) {
         const livePods: RemedialPod[] = snapshot.docs.map((docSnap) => ({
@@ -305,10 +309,9 @@ export const dataService = {
         return livePods;
       }
 
-      // Auto-seed pods
-      console.log("[DataService] Seeding initial remedial pods into Firestore...");
+      // Auto-seed pods in background
       for (const pod of MOCK_REMEDIAL_PODS) {
-        await setDoc(doc(db, "remedial_pods", pod.id), pod);
+        dbTimeout(setDoc(doc(db, "remedial_pods", pod.id), pod), 1000).catch(() => {});
       }
 
       cachedPods = MOCK_REMEDIAL_PODS;
@@ -379,14 +382,14 @@ export const dataService = {
 
     try {
       const planDocRef = doc(db, "study_plans", studentId || "default_student");
-      const snapshot = await getDoc(planDocRef);
+      const snapshot = await dbTimeout(getDoc(planDocRef), 1200);
 
       if (snapshot.exists()) {
         return snapshot.data();
       }
 
-      // Seed initial study plan
-      await setDoc(planDocRef, defaultPlan);
+      // Seed initial study plan in background
+      dbTimeout(setDoc(planDocRef, defaultPlan), 1000).catch(() => {});
       return defaultPlan;
     } catch (err) {
       console.warn("[DataService] Study plan fallback:", err);
@@ -397,13 +400,13 @@ export const dataService = {
   async updateStudyPlanTask(studentId: string, taskId: string, completed: boolean): Promise<void> {
     try {
       const planDocRef = doc(db, "study_plans", studentId || "default_student");
-      const snapshot = await getDoc(planDocRef);
+      const snapshot = await dbTimeout(getDoc(planDocRef), 1200);
       if (snapshot.exists()) {
         const data = snapshot.data();
         const updatedTasks = (data.todayTasks || []).map((t: any) =>
           t.id === taskId ? { ...t, completed } : t
         );
-        await updateDoc(planDocRef, { todayTasks: updatedTasks });
+        dbTimeout(updateDoc(planDocRef, { todayTasks: updatedTasks }), 1000).catch(() => {});
       }
     } catch (err) {
       console.warn("[DataService] Failed to update study plan task:", err);
