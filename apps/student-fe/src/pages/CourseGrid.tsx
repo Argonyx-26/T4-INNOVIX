@@ -12,7 +12,7 @@ interface CourseGridProps {
 type FilterCategory = "All" | "School (K-12)" | "Undergraduate (UG)" | "Postgraduate (PG)" | "Foundations" | "Advanced" | "Bookmarked";
 
 export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
-  const { bookmarks, mode } = useThemeMode();
+  const { bookmarks, savedCourses, mode } = useThemeMode();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTier, setActiveTier] = useState<string>("All");
@@ -39,7 +39,8 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
   ];
 
   const filteredCourses = useMemo(() => {
-    return courses.filter((course) => {
+    const source = activeFilter === "Bookmarked" ? savedCourses : courses;
+    return source.filter((course) => {
       // Tier Filter
       if (activeTier !== "All" && course.tier !== activeTier) return false;
 
@@ -52,7 +53,6 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
       if (activeFilter === "Postgraduate (PG)" && course.tier !== "Postgraduate (PG)") return false;
       if (activeFilter === "Foundations" && course.category !== "Foundations") return false;
       if (activeFilter === "Advanced" && course.category !== "Advanced") return false;
-      if (activeFilter === "Bookmarked" && !bookmarks.includes(course.id)) return false;
 
       // Risk Filter
       if (riskFilter !== "All" && course.misconceptionRisk !== riskFilter) return false;
@@ -71,7 +71,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
 
       return true;
     });
-  }, [activeTier, activeDiscipline, activeFilter, riskFilter, searchQuery, bookmarks]);
+  }, [courses, savedCourses, activeTier, activeDiscipline, activeFilter, riskFilter, searchQuery]);
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">

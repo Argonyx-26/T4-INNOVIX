@@ -1,57 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { 
-  Sparkles, 
-  ArrowRight, 
-  CheckCircle2, 
-  Star, 
-  Zap, 
-  Play, 
-  Volume2, 
-  VolumeX, 
-  BookOpen, 
-  Brain, 
-  Flame, 
-  BarChart3, 
-  BookOpenCheck, 
-  X, 
-  Library,
-  GraduationCap,
-  ShieldCheck,
-  Check
-} from "lucide-react";
-import { TrustStrip } from "../components/TrustStrip";
-import { CourseCard } from "../components/CourseCard";
-import { FinalCTA } from "../components/FinalCTA";
-import { dataService } from "../services/dataService";
-import { Course } from "../types";
+import React, { useState } from "react";
+import { ArrowRight, Play, Volume2, VolumeX, X } from "lucide-react";
 import { useThemeMode } from "../context/ThemeModeContext";
 
 interface LandingPageProps {
-  onSelectCourse: (course: Course) => void;
   onNavigate: (hash: string) => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavigate }) => {
-  const { mode, setMode, speak, stopSpeech } = useThemeMode();
-  const [courses, setCourses] = useState<Course[]>([]);
+export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
+  const { mode, speak, stopSpeech } = useThemeMode();
   const [demoSelectedOption, setDemoSelectedOption] = useState<string | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  useEffect(() => {
-    dataService.getCourses().then(setCourses);
-  }, []);
-
-  // Top 3 curated courses for landing showcase
-  const topCourses = courses.slice(0, 3);
-
-  const handleToggleDyslexic = () => {
-    if (mode === "dyslexic") {
-      setMode("normal");
-    } else {
-      setMode("dyslexic");
-    }
-  };
+  // Dyslexic mode forces a wide font and extra spacing on all text, so copy can't be
+  // laid over the artwork; it gets its own column instead.
+  const stacked = mode === "dyslexic";
+  const overlayOnly = (cls: string) => (stacked ? "" : cls);
 
   const handleReadAloudHero = () => {
     if (isPlayingAudio) {
@@ -64,163 +28,123 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#141416] transition-colors duration-200">
-      {/* =========================================================================
-          HERO SECTION — Designed with exact aesthetic from user's attached image
-          ========================================================================= */}
-      <section className="relative pt-6 sm:pt-10 pb-16 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-            
-            {/* Left Column: Hero Content with concise, accessible copy */}
-            <div className="lg:col-span-6 space-y-6 z-10">
-              
-              {/* Graphic Capsule Status Pills (Direct from Reference Image) */}
-              <div className="flex items-center space-x-2">
-                <div className="w-12 h-6 rounded-full bg-[#111111] dark:bg-white shadow-sm" />
-                <div className="w-6 h-6 rounded-full bg-[#10B981] shadow-sm" />
-                <div className="w-4 h-6 rounded-full bg-[#10B981] shadow-sm" />
-                <div className="w-10 h-6 rounded-full bg-[#10B981] shadow-sm" />
-                <span className="ml-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  LEARN WITHOUT LIMITS
-                </span>
-              </div>
+    <div className="min-h-screen bg-[#F8F8F7] dark:bg-[#141416] transition-colors duration-200">
+      {/* The hero stays light in every theme: its artwork is a flat light-background composition. */}
+      <section className="relative bg-[#F8F8F7] overflow-hidden" aria-labelledby="hero-heading">
+        {/* Overlay layout: the art spans the full hero and the copy/hotspots are positioned in cqw/% so they track it at any width. */}
+        <div
+          className={`relative mx-auto max-w-[1672px] [container-type:inline-size] ${
+            stacked ? "lg:grid lg:grid-cols-2 lg:items-center lg:gap-10 lg:px-[5.08%] lg:py-14" : "lg:aspect-[1672/851]"
+          }`}
+        >
+          {!stacked && (
+            <>
+              <img
+                src="/hero-eduvia.jpg"
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                className="hidden lg:block absolute inset-0 w-full h-full select-none pointer-events-none"
+              />
+              <button
+                onClick={() => setIsVideoModalOpen(true)}
+                aria-label="Play the classroom micro-lesson preview"
+                className="hidden lg:block absolute left-[30.6%] top-[62.9%] w-[27.6%] h-[28%] rounded-[999px] transition hover:ring-4 hover:ring-[#1BBC7E]/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1BBC7E]"
+              />
+              <button
+                onClick={() => onNavigate("#courses")}
+                aria-label="Explore the course catalog"
+                className="hidden lg:block absolute left-[82.6%] top-[11%] w-[14%] h-[32%] rounded-2xl transition hover:ring-4 hover:ring-[#FEDB4A]/60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1BBC7E]"
+              />
+              <button
+                onClick={() => onNavigate("#diagnostic")}
+                aria-label="Start a diagnostic challenge"
+                className="hidden lg:block absolute left-[77.4%] top-[51%] w-[17.4%] h-[20%] rounded-2xl transition hover:ring-4 hover:ring-[#1BBC7E]/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1BBC7E]"
+              />
+              <button
+                onClick={() => onNavigate("#paths")}
+                aria-label="View learning paths"
+                className="hidden lg:block absolute left-[69.6%] top-[84%] w-[23.8%] h-[9%] rounded-full transition hover:ring-4 hover:ring-[#1BBC7E]/40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1BBC7E]"
+              />
+            </>
+          )}
 
-              {/* Bold, Accessible Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold text-[#111111] dark:text-white leading-[1.1] tracking-tight">
-                Learning that fits{" "}
-                <span className="relative inline-block text-[#10B981] underline decoration-[#FACC15] decoration-wavy decoration-2">
-                  your mind.
-                </span>
-              </h1>
-
-              {/* Short, Bite-Sized Subtitle (Lesser Text Content) */}
-              <p className="text-base sm:text-lg text-neutral-700 dark:text-neutral-300 leading-relaxed max-w-xl font-medium">
-                Eduvia diagnoses the <strong>root misconception</strong> behind wrong answers — not just right or wrong. Tailored for <strong>Standard</strong>, <strong>ADHD</strong>, and <strong>Dyslexic</strong> learners.
-              </p>
-
-              {/* Action Pill Buttons */}
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                {/* Primary Pill Button */}
-                <a
-                  href="#diagnostic"
-                  className="inline-flex items-center space-x-2 px-7 py-3.5 rounded-full font-bold text-sm bg-[#111111] dark:bg-white text-white dark:text-[#111111] hover:bg-[#FACC15] hover:text-[#111111] dark:hover:bg-[#FACC15] dark:hover:text-[#111111] shadow-md transition-all transform active:scale-95"
-                >
-                  <Sparkles className="w-4 h-4 text-[#FACC15] group-hover:text-black" />
-                  <span>Start Free Diagnostic</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </a>
-
-                {/* Direct OpenDyslexic Font Toggle Button */}
-                <button
-                  onClick={handleToggleDyslexic}
-                  className={`inline-flex items-center space-x-2 px-5 py-3.5 rounded-full font-semibold text-sm transition-all border shadow-sm ${
-                    mode === "dyslexic"
-                      ? "bg-[#10B981] text-white border-[#10B981]"
-                      : "bg-white dark:bg-[#1E1E24] text-neutral-800 dark:text-neutral-200 border-neutral-300 dark:border-neutral-700 hover:border-[#10B981]"
-                  }`}
-                  title="Toggle OpenDyslexic Weighted Font"
-                >
-                  <BookOpenCheck className="w-4 h-4" />
-                  <span>{mode === "dyslexic" ? "OpenDyslexic Font: ON" : "OpenDyslexic Font"}</span>
-                  {mode === "dyslexic" && <Check className="w-3.5 h-3.5 ml-1" />}
-                </button>
-
-                {/* Text-to-Speech Audio Assist */}
-                <button
-                  onClick={handleReadAloudHero}
-                  className="p-3.5 rounded-full bg-white dark:bg-[#1E1E24] text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 hover:text-[#10B981] hover:border-[#10B981] shadow-sm transition"
-                  title="Listen to summary"
-                >
-                  {isPlayingAudio ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-              </div>
-
-              {/* Feature Chips (Concise Visual Proof) */}
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400">
-                <span className="px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                  ⚡ 3-Tier Scaffolded Hints
-                </span>
-                <span className="px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                  🗺️ Prerequisite Mind Maps
-                </span>
-                <span className="px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                  🤖 Teacher RAG Vector AI
-                </span>
-              </div>
+          <div className={`relative z-10 px-5 sm:px-8 pt-10 pb-8 lg:p-0 ${overlayOnly("lg:absolute lg:left-[5.08%] lg:top-[9.2%] lg:w-[47%]")}`}>
+            <div className={`flex items-center gap-2 ${overlayOnly("lg:gap-[0.6cqw]")}`}>
+              <span aria-hidden="true" className={`w-12 h-6 rounded-full bg-[#0B0B0B] ${overlayOnly("lg:w-[4.3cqw] lg:h-[2cqw]")}`} />
+              <span aria-hidden="true" className={`w-6 h-6 rounded-full bg-[#1BBC7E] ${overlayOnly("lg:w-[2cqw] lg:h-[2cqw]")}`} />
+              <span aria-hidden="true" className={`w-3.5 h-6 rounded-full bg-[#1BBC7E] ${overlayOnly("lg:w-[1.45cqw] lg:h-[2cqw]")}`} />
+              <span aria-hidden="true" className={`w-10 h-6 rounded-full bg-[#1BBC7E] ${overlayOnly("lg:w-[3.6cqw] lg:h-[2cqw]")}`} />
+              <span aria-hidden="true" className={`ml-1.5 h-4 w-px bg-[#0B0B0B]/35 ${overlayOnly("lg:ml-[0.4cqw] lg:h-[1.2cqw]")}`} />
+              <span className={`ml-1 text-xs font-bold uppercase tracking-[0.06em] text-[#1BBC7E] ${overlayOnly("lg:ml-[0.3cqw] lg:text-[clamp(11px,1.02cqw,17px)]")}`}>
+                Learn without limits
+              </span>
             </div>
 
-            {/* Right Column: Hero Visual Artwork matching attached image with interactive hotspots */}
-            <div className="lg:col-span-6 relative flex justify-center items-center">
-              <div className="relative w-full max-w-xl group">
-                
-                {/* Hero Illustration Container with crisp border and subtle lift */}
-                <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-black/10 dark:border-white/10 bg-white">
-                  <img
-                    src="/hero-illustration.jpg"
-                    alt="Eduvia Adaptive Learning Illustration with Student, Playful Badges, and Classroom Preview"
-                    className="w-full h-auto object-cover select-none"
-                    loading="eager"
-                  />
+            <h1
+              id="hero-heading"
+              className={`mt-6 font-display font-extrabold text-[#0B0B0B] ${
+                stacked
+                  ? "leading-[1.25] text-[36px] sm:text-[48px] lg:text-[clamp(36px,3.4vw,56px)]"
+                  : "leading-[1.02] tracking-[-0.03em] xl:tracking-[-0.015em] text-[44px] sm:text-[60px] lg:mt-[2.5cqw] lg:text-[5.9cqw] 2xl:text-[6.2cqw]"
+              }`}
+            >
+              <span className={overlayOnly("lg:whitespace-nowrap")}>Learning that fits</span>{" "}
+              {!stacked && <br className="hidden sm:block" />}
+              <span className="relative z-0 inline-block text-[#1BBC7E]">
+                your mind.
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 300 16"
+                  preserveAspectRatio="none"
+                  className="absolute -z-10 left-[10%] right-0 -bottom-[0.06em] w-[88%] h-[0.16em]"
+                >
+                  <path d="M3 11 Q 150 3 297 8" fill="none" stroke="#FEDB4A" strokeWidth="9" strokeLinecap="round" />
+                </svg>
+              </span>
+            </h1>
 
-                  {/* Interactive Hotspot: Classroom Video Preview Card (Bottom Center) */}
-                  <div 
-                    onClick={() => setIsVideoModalOpen(true)}
-                    className="absolute bottom-[4%] left-[34%] w-[33%] h-[26%] rounded-full cursor-pointer hover:ring-4 hover:ring-emerald-400/50 transition-all flex items-center justify-center group/vid"
-                    title="Click to watch 45-second micro-lesson video preview"
-                  >
-                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white group-hover/vid:scale-110 group-hover/vid:bg-[#10B981] transition-transform shadow-lg">
-                      <Play className="w-4 h-4 sm:w-5 sm:h-5 ml-0.5 fill-current" />
-                    </div>
-                  </div>
+            <p className={`mt-6 max-w-xl text-[17px] sm:text-lg leading-[1.5] sm:leading-[1.5] text-[#211F20] ${overlayOnly("lg:mt-[2.3cqw] lg:max-w-[44cqw] lg:text-[clamp(14px,1.38cqw,23px)]")}`}>
+              Eduvia diagnoses the <strong className="font-bold text-[#0B0B0B]">root misconception</strong> behind wrong answers — not just right or wrong. Tailored for{" "}
+              <strong className="font-bold text-[#0B0B0B]">Standard</strong>, <strong className="font-bold text-[#0B0B0B]">ADHD</strong>, and{" "}
+              <strong className="font-bold text-[#0B0B0B]">Dyslexic</strong> learners.
+            </p>
 
-                  {/* Interactive Hotspot: Top-Right Stacked Pill List */}
-                  <div 
-                    onClick={() => onNavigate("#courses")}
-                    className="absolute top-[16%] right-[5%] w-[16%] h-[20%] cursor-pointer hover:opacity-90 transition"
-                    title="Explore Course Curriculum"
-                  />
-
-                  {/* Interactive Hotspot: Floating White Card */}
-                  <div 
-                    onClick={() => onNavigate("#diagnostic")}
-                    className="absolute top-[45%] right-[7%] w-[20%] h-[15%] cursor-pointer hover:opacity-90 transition"
-                    title="Launch Cognitive Diagnostic Challenge"
-                  />
-
-                  {/* Interactive Hotspot: Connected Circles ooooo */}
-                  <div 
-                    onClick={() => onNavigate("#paths")}
-                    className="absolute bottom-[6%] right-[6%] w-[22%] h-[8%] cursor-pointer hover:opacity-90 transition"
-                    title="5-Stage Learning Progression Paths"
-                  />
-                </div>
-
-                {/* Floating Micro-Badge Indicator */}
-                <div className="absolute -bottom-4 -left-4 bg-white dark:bg-[#1E1E24] px-4 py-2.5 rounded-2xl shadow-xl border border-black/10 dark:border-white/10 flex items-center space-x-2.5 animate-bounce duration-1000">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-ping" />
-                  <span className="text-xs font-bold text-neutral-900 dark:text-white">
-                    98.4% Diagnostic Accuracy
-                  </span>
-                </div>
-              </div>
+            <div className={`mt-7 flex items-center gap-3 ${overlayOnly("lg:mt-[2cqw] lg:gap-[0.8cqw]")}`}>
+              <a
+                href="#diagnostic"
+                className={`inline-flex items-center gap-2 h-12 px-6 rounded-full bg-[#0B0B0B] text-white font-bold text-sm ${overlayOnly("lg:h-[clamp(40px,3.3cqw,56px)] lg:px-[1.7cqw] lg:text-[clamp(13px,1.05cqw,18px)]")} shadow-[0_3px_0_#1BBC7E] hover:bg-[#1BBC7E] hover:text-[#0B0B0B] hover:shadow-[0_3px_0_#0B0B0B] transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1BBC7E]/50`}
+              >
+                <span>Start Free Diagnostic</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+              <button
+                onClick={handleReadAloudHero}
+                aria-label={isPlayingAudio ? "Stop reading aloud" : "Read the introduction aloud"}
+                className={`grid place-items-center w-12 h-12 shrink-0 ${overlayOnly("lg:w-[clamp(40px,3.3cqw,56px)] lg:h-[clamp(40px,3.3cqw,56px)]")} rounded-full border-[1.5px] border-[#0B0B0B] bg-white text-[#0B0B0B] hover:bg-[#FEDB4A] transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1BBC7E]/50`}
+              >
+                {isPlayingAudio ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
 
+          {/* Stacked layouts (small screens, dyslexic mode) show the illustrated right half of the art. */}
+          <div className={`relative px-5 sm:px-8 pb-12 lg:p-0 ${overlayOnly("lg:hidden")}`}>
+            <img
+              src="/hero-eduvia.jpg"
+              alt="Smiling student holding a phone, surrounded by learning progress cards"
+              className="w-full aspect-square sm:aspect-[4/3] lg:aspect-square object-cover object-right"
+            />
           </div>
         </div>
       </section>
 
       {/* =========================================================================
-          TRUST STRIP — Single-Line Metrics
-          ========================================================================= */}
-      <TrustStrip />
-
-      {/* =========================================================================
           SECTION 2 — The 3-Step Cognitive Loop (Chunked, Minimal Text)
           ========================================================================= */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section id="how-it-works" className="scroll-mt-24 py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center max-w-xl mx-auto mb-10">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#1BBC7E]">
             HOW IT WORKS
           </span>
           <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-[#111111] dark:text-white mt-1">
@@ -230,7 +154,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Step 1 */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm hover:border-[#10B981] transition">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm hover:border-[#1BBC7E] transition">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center font-bold text-lg mb-4 font-mono">
               01
             </div>
@@ -243,7 +167,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
           </div>
 
           {/* Step 2 */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm hover:border-[#FACC15] transition">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm hover:border-[#FEDB4A] transition">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-lg mb-4 font-mono">
               02
             </div>
@@ -256,7 +180,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
           </div>
 
           {/* Step 3 */}
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm hover:border-[#10B981] transition">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm hover:border-[#1BBC7E] transition">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-lg mb-4 font-mono">
               03
             </div>
@@ -273,12 +197,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
       {/* =========================================================================
           SECTION 3 — Interactive Misconception Sandbox (Instant 2-Click Demo)
           ========================================================================= */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+      <section id="features" className="scroll-mt-24 py-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
         <div className="rounded-3xl bg-white dark:bg-[#1E1E24] p-6 sm:p-8 border border-black/10 dark:border-white/10 shadow-lg">
           <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/10">
             <div className="flex items-center space-x-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#1BBC7E]">
                 Interactive Misconception Test
               </span>
             </div>
@@ -316,7 +240,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
               }`}
             >
               <span>x = 5 (Correct Root)</span>
-              <span className="text-xs opacity-75">&check;</span>
+              <span className="text-xs opacity-75" aria-hidden="true">✓</span>
             </button>
           </div>
 
@@ -343,40 +267,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
           )}
         </div>
       </section>
-
-      {/* =========================================================================
-          SECTION 4 — Curated Multi-Tier Courses (Concise Cards)
-          ========================================================================= */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
-              UNIVERSAL CATALOG
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-[#111111] dark:text-white mt-1">
-              School, College &amp; Professional Tracks
-            </h2>
-          </div>
-          <a
-            href="#courses"
-            className="mt-3 sm:mt-0 inline-flex items-center space-x-1.5 font-bold text-sm text-[#10B981] hover:underline"
-          >
-            <span>Explore All Courses</span>
-            <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {topCourses.map((c) => (
-            <CourseCard key={c.id} course={c} onSelect={onSelectCourse} />
-          ))}
-        </div>
-      </section>
-
-      {/* =========================================================================
-          SECTION 5 — Final Call to Action
-          ========================================================================= */}
-      <FinalCTA />
 
       {/* =========================================================================
           MODAL: Classroom Video Preview Modal (Triggered from Hero Card)
@@ -437,7 +327,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavi
               <a
                 href="#diagnostic"
                 onClick={() => setIsVideoModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#10B981] text-white hover:opacity-90 transition"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1BBC7E] text-white hover:opacity-90 transition"
               >
                 Try Full Diagnostic &rarr;
               </a>

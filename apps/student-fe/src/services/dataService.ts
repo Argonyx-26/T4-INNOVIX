@@ -488,7 +488,29 @@ export const dataService = {
   },
 
   // =========================================================================
-  // 9. COMPLETE DATABASE SEEDING UTILITY
+  // 9. COURSE BOOKMARKS (users/{uid}/data/course_bookmarks)
+  // =========================================================================
+  // Full course snapshots are stored so saved courses stay viewable even if the
+  // catalog changes or fails to load.
+  async getCourseBookmarks(uid: string): Promise<Course[]> {
+    const snap = await dbTimeout(getDoc(doc(db, "users", uid, "data", "course_bookmarks")));
+    return snap.exists() ? ((snap.data().courses as Course[]) || []) : [];
+  },
+
+  async saveCourseBookmarks(uid: string, courses: Course[]): Promise<void> {
+    // Firestore rejects undefined field values; a JSON round-trip drops them.
+    const clean: Course[] = JSON.parse(JSON.stringify(courses));
+    await dbTimeout(
+      setDoc(doc(db, "users", uid, "data", "course_bookmarks"), {
+        courseIds: clean.map((c) => c.id),
+        courses: clean,
+        updatedAt: new Date().toISOString(),
+      })
+    );
+  },
+
+  // =========================================================================
+  // 10. COMPLETE DATABASE SEEDING UTILITY
   // =========================================================================
   async seedAllCollections(): Promise<void> {
     console.log("[DataService] Seeding all application collections to Firestore...");

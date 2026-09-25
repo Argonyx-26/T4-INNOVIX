@@ -137,7 +137,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({ course, onClose }) => 
         {/* Footer Actions */}
         <div className="p-6 bg-black/5 dark:bg-white/5 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
           <button
-            onClick={() => toggleBookmark(course.id)}
+            onClick={() => toggleBookmark(course)}
             className="flex items-center space-x-2 text-sm font-semibold text-[#141414] dark:text-white hover:text-[#8266F0] transition"
           >
             {isBookmarked ? (

@@ -440,7 +440,7 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h4 className="font-bold text-sm text-neutral-900 dark:text-white group-hover:text-[#8266F0] transition">{student.name}</h4>
-                        <p className="text-[11px] text-neutral-500">{student.academicTier} • {student.learningStyle}</p>
+                        <p className="text-[11px] text-neutral-500">{student.tier} • {student.learningStyle}</p>
                       </div>
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#8266F0] to-[#EC4899] flex items-center justify-center text-white font-bold text-xs">
                         {student.name.charAt(0)}
