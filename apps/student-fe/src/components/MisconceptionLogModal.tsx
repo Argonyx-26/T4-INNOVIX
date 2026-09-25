@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { X, History, CheckCircle2, AlertTriangle, Clock, RefreshCw, Sparkles, BookOpen } from "lucide-react";
-import { MOCK_STUDENT_MISCONCEPTION_LOGS } from "../data/mockStudentTelemetry";
-import { MisconceptionStatus } from "../types";
+import { dataService } from "../services/dataService";
+import { MisconceptionStatus, StudentMisconceptionRecord } from "../types";
 
 interface MisconceptionLogModalProps {
   isOpen: boolean;
@@ -9,6 +9,14 @@ interface MisconceptionLogModalProps {
 }
 
 export const MisconceptionLogModal: React.FC<MisconceptionLogModalProps> = ({ isOpen, onClose }) => {
+  const [logs, setLogs] = useState<StudentMisconceptionRecord[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      dataService.getStudentMisconceptions().then(setLogs);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const getStatusBadge = (status: MisconceptionStatus) => {
@@ -96,7 +104,7 @@ export const MisconceptionLogModal: React.FC<MisconceptionLogModalProps> = ({ is
 
         {/* Scrollable Log Entries */}
         <div className="p-6 overflow-y-auto space-y-4 flex-1">
-          {MOCK_STUDENT_MISCONCEPTION_LOGS.map((item) => (
+          {logs.map((item) => (
             <div
               key={item.id}
               className="p-4 rounded-2xl bg-white dark:bg-[#25252D] border border-black/5 dark:border-white/10 shadow-sm space-y-2.5"

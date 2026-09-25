@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Sparkles, 
   ArrowRight, 
@@ -16,11 +16,12 @@ import {
   TrendingUp, 
   ShieldCheck, 
   ExternalLink,
-  Target
+  Target,
+  Loader2
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { MOCK_STUDENT_MISCONCEPTION_LOGS } from "../data/mockStudentTelemetry";
-import { MOCK_COURSES } from "../data/mockCourses";
+import { dataService } from "../services/dataService";
+import { Course, StudentMisconceptionRecord } from "../types";
 
 interface StudentDashboardProps {
   onNavigate: (hash: string) => void;
@@ -29,17 +30,36 @@ interface StudentDashboardProps {
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("Computer Science");
+  const [misconceptions, setMisconceptions] = useState<StudentMisconceptionRecord[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    Promise.all([
+      dataService.getStudentMisconceptions(user?.uid),
+      dataService.getCourses()
+    ]).then(([logs, crs]) => {
+      setMisconceptions(logs);
+      setCourses(crs);
+      setLoading(false);
+    });
+  }, [user?.uid]);
 
   const displayName = user?.displayName || "Alex Chen";
   const userTier = user?.academicTier || "Undergraduate (UG)";
 
   // Misconception status counts
-  const detectedCount = MOCK_STUDENT_MISCONCEPTION_LOGS.filter(m => m.status === "Detected").length;
-  const remediatingCount = MOCK_STUDENT_MISCONCEPTION_LOGS.filter(m => m.status === "Remediating").length;
-  const reevaluatingCount = MOCK_STUDENT_MISCONCEPTION_LOGS.filter(m => m.status === "Re-Evaluating").length;
-  const resolvedCount = MOCK_STUDENT_MISCONCEPTION_LOGS.filter(m => m.status === "Resolved").length;
+  const detectedCount = misconceptions.filter(m => m.status === "Detected").length;
+  const remediatingCount = misconceptions.filter(m => m.status === "Remediating").length;
+  const reevaluatingCount = misconceptions.filter(m => m.status === "Re-Evaluating").length;
+  const resolvedCount = misconceptions.filter(m => m.status === "Resolved").length;
 
-  const currentCourse = MOCK_COURSES[0]; // DSA
+  const currentCourse = courses[0] || {
+    id: "course-dsa",
+    title: "Data Structures & Algorithmic Invariants",
+    category: "Core Curriculum",
+    discipline: "Computer Science",
+  };
 
   return (
     <div className="min-h-screen py-8 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-300">
@@ -236,7 +256,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
 
         {/* Active Misconception Item preview */}
         <div className="space-y-3 pt-2">
-          {MOCK_STUDENT_MISCONCEPTION_LOGS.slice(0, 3).map((item) => (
+          {misconceptions.slice(0, 3).map((item) => (
             <div
               key={item.id}
               className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#8266F0]/40 transition"

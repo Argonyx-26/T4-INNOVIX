@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, X, BookOpen, Sparkles, User, ArrowRight, CornerDownLeft, Library, ExternalLink } from "lucide-react";
-import { MOCK_COURSES } from "../../data/mockCourses";
-import { MOCK_INSTRUCTORS } from "../../data/mockInstructors";
-import { MOCK_EDUCATIONAL_RESOURCES } from "../../data/mockResources";
-import { Course, EducationalResource } from "../../types";
+import { dataService } from "../../services/dataService";
+import { Course, EducationalResource, Instructor } from "../../types";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -19,13 +17,29 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onNavigate,
 }) => {
   const [query, setQuery] = useState("");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [resources, setResources] = useState<EducationalResource[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      Promise.all([
+        dataService.getCourses(),
+        dataService.getInstructors(),
+        dataService.getResources()
+      ]).then(([c, i, r]) => {
+        setCourses(c);
+        setInstructors(i);
+        setResources(r);
+      });
+    }
+  }, [isOpen]);
 
   // Cmd+K hotkey & Escape key listeners
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        // Toggle search modal can be managed by parent or local
       }
       if (e.key === "Escape" && isOpen) {
         onClose();
@@ -37,7 +51,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   if (!isOpen) return null;
 
-  const filteredCourses = MOCK_COURSES.filter(
+  const filteredCourses = courses.filter(
     (c) =>
       c.title.toLowerCase().includes(query.toLowerCase()) ||
       c.description.toLowerCase().includes(query.toLowerCase()) ||
@@ -46,7 +60,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       (c.tier && c.tier.toLowerCase().includes(query.toLowerCase()))
   );
 
-  const filteredResources = MOCK_EDUCATIONAL_RESOURCES.filter(
+  const filteredResources = resources.filter(
     (res: EducationalResource) =>
       res.title.toLowerCase().includes(query.toLowerCase()) ||
       res.summary.toLowerCase().includes(query.toLowerCase()) ||
@@ -54,7 +68,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       res.source.toLowerCase().includes(query.toLowerCase())
   );
 
-  const filteredInstructors = MOCK_INSTRUCTORS.filter(
+  const filteredInstructors = instructors.filter(
     (ins) =>
       ins.name.toLowerCase().includes(query.toLowerCase()) ||
       ins.credentials.toLowerCase().includes(query.toLowerCase()) ||

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Sparkles, 
   Calendar, 
@@ -13,7 +13,8 @@ import {
   Plus, 
   ExternalLink 
 } from "lucide-react";
-import { MOCK_COURSES } from "../data/mockCourses";
+import { dataService } from "../services/dataService";
+import { Course } from "../types";
 
 interface StudyPlanProps {
   onNavigate: (hash: string) => void;
@@ -21,11 +22,29 @@ interface StudyPlanProps {
 
 export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
   const [completedItems, setCompletedItems] = useState<string[]>(["item-1"]);
+  const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      dataService.getCourses(),
+      dataService.getStudyPlan()
+    ]).then(([crs, plan]) => {
+      setCourses(crs);
+      if (plan?.todayTasks) {
+        setCompletedItems(
+          plan.todayTasks.filter((t: any) => t.completed).map((t: any) => t.id)
+        );
+      }
+    });
+  }, []);
 
   const toggleComplete = (id: string) => {
-    setCompletedItems(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+    setCompletedItems(prev => {
+      const isDone = prev.includes(id);
+      const next = isDone ? prev.filter(i => i !== id) : [...prev, id];
+      dataService.updateStudyPlanTask("default_student", id, !isDone);
+      return next;
+    });
   };
 
   const todayTasks = [
@@ -241,7 +260,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
           </div>
 
           <div className="space-y-2.5">
-            {MOCK_COURSES.slice(0, 2).map((c) => (
+            {courses.slice(0, 2).map((c) => (
               <div
                 key={c.id}
                 onClick={() => onNavigate("#courses")}

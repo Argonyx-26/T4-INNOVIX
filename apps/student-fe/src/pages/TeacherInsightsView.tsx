@@ -9,7 +9,7 @@ import {
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useThemeMode } from "../context/ThemeModeContext";
-import { MOCK_STUDENT_PROFILES, MOCK_REMEDIAL_PODS } from "../data/mockStudentTelemetry";
+import { dataService } from "../services/dataService";
 import { StudentTelemetryProfile, RemedialPod } from "../types";
 
 export interface TriageAlertDoc {
@@ -40,6 +40,18 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
   const { addToast } = useThemeMode();
   const [selectedClass, setSelectedClass] = useState<string>("All Classes");
   const [activeTab, setActiveTab] = useState<TeacherSubTab>(initialTab);
+  const [studentProfiles, setStudentProfiles] = useState<StudentTelemetryProfile[]>([]);
+  const [remedialPods, setRemedialPods] = useState<RemedialPod[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      dataService.getStudentTelemetryProfiles(),
+      dataService.getRemedialPods()
+    ]).then(([profiles, pods]) => {
+      setStudentProfiles(profiles);
+      setRemedialPods(pods);
+    });
+  }, []);
 
   useEffect(() => {
     if (initialTab) {
@@ -374,7 +386,7 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
               </div>
 
               <div className="space-y-2.5">
-                {MOCK_REMEDIAL_PODS.slice(0, 2).map((pod) => (
+                {remedialPods.slice(0, 2).map((pod) => (
                   <div key={pod.id} className="p-3 rounded-2xl bg-[#8266F0]/5 border border-[#8266F0]/15 space-y-1">
                     <div className="flex items-center justify-between text-xs font-bold text-neutral-900 dark:text-white">
                       <span>{pod.podName}</span>
@@ -657,7 +669,7 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
 
           {/* Student Selector Chips */}
           <div className="flex flex-wrap gap-2">
-            {MOCK_STUDENT_PROFILES.map((st) => {
+            {studentProfiles.map((st) => {
               const isSelected = selectedStudentIds.includes(st.id);
               return (
                 <button
@@ -683,7 +695,8 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
                 <tr>
                   <th className="p-4">Diagnostic Dimension</th>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    if (!st) return null;
                     return (
                       <th key={id} className="p-4 text-neutral-900 dark:text-white font-bold text-xs">
                         <div className="flex items-center space-x-2">
@@ -699,18 +712,18 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Cohort / Level</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 font-mono">{st.cohort}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 font-mono">{st?.cohort || "Cohort"}</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Overall Mastery Score</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
+                    const st = studentProfiles.find((s) => s.id === id);
                     return (
                       <td key={id} className="p-4 font-bold font-mono text-emerald-600 text-sm">
-                        {Math.round(st.masteryScore * 100)}%
+                        {st ? Math.round(st.masteryScore * 100) : 75}%
                       </td>
                     );
                   })}
@@ -719,7 +732,8 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Hint Reliance Index</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    if (!st) return <td key={id} className="p-4 font-mono">0.3</td>;
                     return (
                       <td key={id} className="p-4 font-mono">
                         {st.hintRelianceIndex < 0.3 ? (
@@ -737,32 +751,32 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Average Velocity</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 font-mono">{st.averageVelocitySec}s per item</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 font-mono">{st?.averageVelocitySec || 40}s per item</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Active Learning Style</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 font-semibold text-[#8266F0]">{st.learningStyle}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 font-semibold text-[#8266F0]">{st?.learningStyle || "Visual"}</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Primary Cognitive Hurdle</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 text-neutral-800 dark:text-slate-200">{st.primaryStumblingBlock}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 text-neutral-800 dark:text-slate-200">{st?.primaryStumblingBlock || "Concept boundary"}</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Peer Study Match</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 text-xs font-semibold text-emerald-600">{st.recommendedPeerMatch}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 text-xs font-semibold text-emerald-600">{st?.recommendedPeerMatch || "Peer study match"}</td>;
                   })}
                 </tr>
               </tbody>
@@ -801,7 +815,7 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {MOCK_REMEDIAL_PODS.map((pod) => (
+            {remedialPods.map((pod) => (
               <div
                 key={pod.id}
                 className="p-5 rounded-2xl bg-neutral-50 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-sm space-y-4 flex flex-col justify-between"
@@ -831,7 +845,7 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
                     </span>
                     <div className="flex -space-x-2 overflow-hidden">
                       {pod.studentIds.map((stId) => {
-                        const st = MOCK_STUDENT_PROFILES.find((s) => s.id === stId);
+                        const st = studentProfiles.find((s) => s.id === stId);
                         if (!st) return null;
                         return (
                           <img

@@ -8,9 +8,8 @@ import {
 import { useThemeMode } from "../context/ThemeModeContext";
 import { ADHDDiagnosticView } from "./ADHDDiagnosticView";
 import { DyslexicDiagnosticView } from "./DyslexicDiagnosticView";
-import { DiagnosticOption, ConceptChallenge } from "../types";
-import { UNIVERSAL_CHALLENGES } from "../data/mockUniversalChallenges";
-import { MOCK_EDUCATIONAL_RESOURCES } from "../data/mockResources";
+import { DiagnosticOption, ConceptChallenge, EducationalResource } from "../types";
+import { dataService } from "../services/dataService";
 import { InteractiveMindMap } from "../components/InteractiveMindMap";
 import { MisconceptionLogModal } from "../components/MisconceptionLogModal";
 import { useAuth } from "../context/AuthContext";
@@ -19,10 +18,23 @@ export const LearnLensDiagnostic: React.FC = () => {
   const { mode, speak } = useThemeMode();
   const { user } = useAuth();
 
+  const [challenges, setChallenges] = useState<ConceptChallenge[]>([]);
+  const [resources, setResources] = useState<EducationalResource[]>([]);
+  const [loadingData, setLoadingData] = useState<boolean>(true);
+
   // Active Multi-Tier Challenge
   const [selectedChallengeId, setSelectedChallengeId] = useState<string>("math-school-linear");
+
+  useEffect(() => {
+    Promise.all([dataService.getChallenges(), dataService.getResources()]).then(([chs, res]) => {
+      setChallenges(chs);
+      setResources(res);
+      setLoadingData(false);
+    });
+  }, []);
+
   const activeChallenge: ConceptChallenge = 
-    UNIVERSAL_CHALLENGES.find((c) => c.id === selectedChallengeId) || UNIVERSAL_CHALLENGES[0];
+    challenges.find((c) => c.id === selectedChallengeId) || challenges[0] || ({} as ConceptChallenge);
 
   const [currentStage, setCurrentStage] = useState<number>(0);
   const [selectedOption, setSelectedOption] = useState<DiagnosticOption | null>(null);
@@ -150,7 +162,7 @@ export const LearnLensDiagnostic: React.FC = () => {
   const formattedSeconds = (elapsedMs / 1000).toFixed(1);
 
   // Filter matched resources for active challenge
-  const matchedResources = MOCK_EDUCATIONAL_RESOURCES.filter(
+  const matchedResources = resources.filter(
     (res) => res.discipline === activeChallenge.discipline
   ).slice(0, 3);
 
@@ -207,7 +219,7 @@ export const LearnLensDiagnostic: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto scrollbar-none pb-1">
-          {UNIVERSAL_CHALLENGES.map((ch) => {
+          {challenges.map((ch) => {
             const isSelected = ch.id === selectedChallengeId;
             return (
               <button

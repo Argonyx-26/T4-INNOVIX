@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Sparkles, 
   ArrowRight, 
@@ -22,7 +22,7 @@ import {
 import { TrustStrip } from "../components/TrustStrip";
 import { CourseCard } from "../components/CourseCard";
 import { FinalCTA } from "../components/FinalCTA";
-import { MOCK_COURSES } from "../data/mockCourses";
+import { dataService } from "../services/dataService";
 import { Course } from "../types";
 import { useThemeMode } from "../context/ThemeModeContext";
 
@@ -33,12 +33,17 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onSelectCourse, onNavigate }) => {
   const { mode, setMode, speak, stopSpeech } = useThemeMode();
+  const [courses, setCourses] = useState<Course[]>([]);
   const [demoSelectedOption, setDemoSelectedOption] = useState<string | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
+  useEffect(() => {
+    dataService.getCourses().then(setCourses);
+  }, []);
+
   // Top 3 curated courses for landing showcase
-  const topCourses = MOCK_COURSES.slice(0, 3);
+  const topCourses = courses.slice(0, 3);
 
   const handleToggleDyslexic = () => {
     if (mode === "dyslexic") {

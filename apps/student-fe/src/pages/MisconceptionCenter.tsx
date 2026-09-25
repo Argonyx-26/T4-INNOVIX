@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Sparkles, 
   Search, 
@@ -18,9 +18,10 @@ import {
   Lightbulb, 
   ShieldCheck, 
   X,
-  Target
+  Target,
+  Loader2
 } from "lucide-react";
-import { MOCK_STUDENT_MISCONCEPTION_LOGS } from "../data/mockStudentTelemetry";
+import { dataService } from "../services/dataService";
 import { StudentMisconceptionRecord, MisconceptionStatus } from "../types";
 
 interface MisconceptionCenterProps {
@@ -28,13 +29,22 @@ interface MisconceptionCenterProps {
 }
 
 export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavigate }) => {
+  const [misconceptions, setMisconceptions] = useState<StudentMisconceptionRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"All" | MisconceptionStatus>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("All");
   const [selectedRecord, setSelectedRecord] = useState<StudentMisconceptionRecord | null>(null);
 
+  useEffect(() => {
+    dataService.getStudentMisconceptions().then((data) => {
+      setMisconceptions(data);
+      setLoading(false);
+    });
+  }, []);
+
   // Filter items
-  const filteredRecords = MOCK_STUDENT_MISCONCEPTION_LOGS.filter((item) => {
+  const filteredRecords = misconceptions.filter((item) => {
     const matchesTab = activeTab === "All" || item.status === activeTab;
     const matchesSearch = 
       item.conceptName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -117,8 +127,8 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {(["All", "Detected", "Remediating", "Re-Evaluating", "Resolved"] as const).map((tab) => {
             const count = tab === "All" 
-              ? MOCK_STUDENT_MISCONCEPTION_LOGS.length 
-              : MOCK_STUDENT_MISCONCEPTION_LOGS.filter(m => m.status === tab).length;
+              ? misconceptions.length 
+              : misconceptions.filter(m => m.status === tab).length;
             const isActive = activeTab === tab;
             return (
               <button

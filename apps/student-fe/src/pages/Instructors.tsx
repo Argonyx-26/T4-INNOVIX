@@ -1,16 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   GraduationCap, Star, Users, Calendar, Clock, CheckCircle2, 
-  ExternalLink, Sparkles, MessageSquare, Award, ArrowRight
+  ExternalLink, Sparkles, MessageSquare, Award, ArrowRight, Loader2
 } from "lucide-react";
-import { MOCK_INSTRUCTORS } from "../data/mockInstructors";
+import { dataService } from "../services/dataService";
 import { Instructor } from "../types";
 import { useThemeMode } from "../context/ThemeModeContext";
 
 export const Instructors: React.FC = () => {
   const { addToast } = useThemeMode();
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
   const [bookingSuccessId, setBookingSuccessId] = useState<string | null>(null);
+
+  useEffect(() => {
+    dataService.getInstructors().then((data) => {
+      setInstructors(data);
+      setLoading(false);
+    });
+  }, []);
 
   const handleBookOfficeHours = (instructor: Instructor) => {
     setBookingSuccessId(instructor.id);
@@ -62,9 +71,15 @@ export const Instructors: React.FC = () => {
       </div>
 
       {/* Instructors Directory Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-        {MOCK_INSTRUCTORS.map((instructor) => {
-          const isBooked = bookingSuccessId === instructor.id;
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-8 h-8 text-[#8266F0] animate-spin" />
+          <p className="text-xs text-neutral-500 font-medium">Loading faculty directory from Firestore...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {instructors.map((instructor) => {
+            const isBooked = bookingSuccessId === instructor.id;
 
           return (
             <div
@@ -154,6 +169,7 @@ export const Instructors: React.FC = () => {
           );
         })}
       </div>
+    )}
 
       {/* Pedagogical Philosophy Feature Card */}
       <div className="p-8 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
