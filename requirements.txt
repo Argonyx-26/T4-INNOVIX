@@ -1,0 +1,20 @@
+# Core Framework & API
+Django>=5.0,<6.0
+djangorestframework>=3.15.0
+django-cors-headers>=4.3.1
+
+# Auth & External SDKs
+firebase-admin>=6.5.0
+openai>=1.30.0
+google-generativeai>=0.7.0
+
+# Mathematical & ML Libraries
+scikit-learn>=1.5.0
+numpy>=1.26.0
+pandas>=2.0.0
+
+# Production & Deployment (Render Web Service)
+gunicorn>=22.0.0
+whitenoise>=6.6.0
+dj-database-url>=2.1.0
+python-dotenv>=1.0.1
