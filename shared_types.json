@@ -1,0 +1,362 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LearnLens Shared Contract Types",
+  "description": "Standardized schema contract for LearnLens backend developers, isolating API contracts, statistical outputs, and LLM diagnostic formats.",
+  "version": "1.0.0",
+  "contracts": {
+    "assessment_submission_request": {
+      "endpoint": "POST /api/assessments/submit/",
+      "description": "Exact JSON payload expected by POST /api/assessments/submit/ from client applications.",
+      "type": "object",
+      "required": [
+        "assessment_id",
+        "user_id",
+        "subject_domain",
+        "started_at",
+        "completed_at",
+        "responses"
+      ],
+      "properties": {
+        "assessment_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier of the assessment session."
+        },
+        "user_id": {
+          "type": "string",
+          "description": "Unique ID of the student/learner (Firebase UID or system ID)."
+        },
+        "subject_domain": {
+          "type": "string",
+          "enum": ["mathematics", "physics", "chemistry", "biology", "computer_science", "reading_comprehension", "general_stem"],
+          "description": "Domain-agnostic subject categorization for diagnostic calibration."
+        },
+        "grade_or_target_level": {
+          "type": "string",
+          "description": "Grade level or target difficulty baseline (e.g. 'Grade 10', 'Undergraduate', 'K-12 Tier 3')."
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 timestamp when the assessment started."
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 timestamp when the assessment was submitted."
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "client_version": { "type": "string" },
+            "device_platform": { "type": "string" },
+            "proctoring_flags": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "responses": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "question_id",
+              "item_difficulty",
+              "is_correct",
+              "response_time_ms",
+              "topic_id"
+            ],
+            "properties": {
+              "question_id": {
+                "type": "string",
+                "description": "Unique identifier of the question item."
+              },
+              "topic_id": {
+                "type": "string",
+                "description": "Concept/sub-domain taxonomy tag (e.g. 'algebra.quadratics', 'optics.refraction')."
+              },
+              "item_difficulty": {
+                "type": "number",
+                "minimum": -4.0,
+                "maximum": 4.0,
+                "description": "Calibrated IRT b-parameter (difficulty)."
+              },
+              "item_discrimination": {
+                "type": "number",
+                "minimum": 0.0,
+                "default": 1.0,
+                "description": "IRT a-parameter (discrimination coefficient)."
+              },
+              "selected_option_id": {
+                "type": "string",
+                "description": "ID of selected multiple-choice option (if applicable)."
+              },
+              "free_text_answer": {
+                "type": "string",
+                "description": "Student's raw textual or numerical explanation/work (if applicable)."
+              },
+              "is_correct": {
+                "type": "boolean",
+                "description": "Direct correctness flag (scored client-side or by validator)."
+              },
+              "response_time_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Latency in milliseconds spent answering the question."
+              },
+              "attempt_count": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1,
+                "description": "Number of attempts on this specific question."
+              },
+              "confidence_score": {
+                "type": "number",
+                "minimum": 1.0,
+                "maximum": 5.0,
+                "description": "Self-reported confidence level (1 = pure guess, 5 = absolute certainty)."
+              }
+            }
+          }
+        }
+      },
+      "example": {
+        "assessment_id": "7f9a6e12-8822-4469-8e7c-d6b38c21ad90",
+        "user_id": "usr_firebase_984712",
+        "subject_domain": "mathematics",
+        "grade_or_target_level": "Grade 10",
+        "started_at": "2026-09-25T12:30:00Z",
+        "completed_at": "2026-09-25T13:00:00Z",
+        "metadata": {
+          "client_version": "v1.4.2",
+          "device_platform": "web"
+        },
+        "responses": [
+          {
+            "question_id": "q_math_algebra_001",
+            "topic_id": "algebra.polynomials.factoring",
+            "item_difficulty": 0.45,
+            "item_discrimination": 1.2,
+            "selected_option_id": "opt_c",
+            "free_text_answer": "Factored using difference of squares: (x-3)(x+3)",
+            "is_correct": true,
+            "response_time_ms": 34200,
+            "attempt_count": 1,
+            "confidence_score": 4.5
+          },
+          {
+            "question_id": "q_math_algebra_002",
+            "topic_id": "algebra.quadratics.vertex_form",
+            "item_difficulty": 1.15,
+            "item_discrimination": 1.35,
+            "selected_option_id": "opt_a",
+            "free_text_answer": "h = -b/2a which gave 2, but forgot negative sign on k",
+            "is_correct": false,
+            "response_time_ms": 58900,
+            "attempt_count": 2,
+            "confidence_score": 2.0
+          }
+        ]
+      }
+    },
+
+    "llm_diagnostic_output_payload": {
+      "producer": "ai_engine.prompts.diagnostic_agent / OpenAI Structured Output",
+      "description": "Exact JSON payload that the LLM must return for diagnostic synthesis and remediation planning. Must strictly match this schema.",
+      "type": "object",
+      "required": [
+        "diagnostic_summary",
+        "proficiency_level",
+        "identified_misconceptions",
+        "cognitive_strengths",
+        "learning_gaps",
+        "recommended_interventions",
+        "confidence_index"
+      ],
+      "properties": {
+        "diagnostic_summary": {
+          "type": "string",
+          "description": "Executive synthesis of the learner's overall conceptual and procedural performance."
+        },
+        "proficiency_level": {
+          "type": "string",
+          "enum": ["novice", "emerging", "proficient", "advanced", "master"],
+          "description": "Standardized qualitative mastery tier synthesized from statistical and textual work."
+        },
+        "identified_misconceptions": {
+          "type": "array",
+          "description": "Specific conceptual flaws, procedural errors, or cognitive traps identified from erroneous answers and student explanations.",
+          "items": {
+            "type": "object",
+            "required": [
+              "topic_id",
+              "misconception_name",
+              "severity",
+              "evidence_question_ids",
+              "detailed_rationale"
+            ],
+            "properties": {
+              "topic_id": {
+                "type": "string",
+                "description": "Taxonomy topic key matching the assessment questions."
+              },
+              "misconception_name": {
+                "type": "string",
+                "description": "Short diagnostic label (e.g. 'Sign reversal in quadratic vertex conversion')."
+              },
+              "severity": {
+                "type": "string",
+                "enum": ["critical", "moderate", "minor"],
+                "description": "Impact of this misconception on future learning progression."
+              },
+              "evidence_question_ids": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Questions where this misconception manifested."
+              },
+              "detailed_rationale": {
+                "type": "string",
+                "description": "Pedagogical explanation of why the learner arrived at this error."
+              }
+            }
+          }
+        },
+        "cognitive_strengths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Demonstrated skills, solid mental models, and fluent competencies."
+        },
+        "learning_gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["topic_id", "gap_description", "priority_rank"],
+            "properties": {
+              "topic_id": { "type": "string" },
+              "gap_description": { "type": "string" },
+              "priority_rank": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "recommended_interventions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "action_type",
+              "target_topic",
+              "description",
+              "estimated_time_minutes"
+            ],
+            "properties": {
+              "action_type": {
+                "type": "string",
+                "enum": ["micro_lesson", "targeted_practice", "concept_map_review", "worked_example_study"]
+              },
+              "target_topic": { "type": "string" },
+              "description": { "type": "string" },
+              "estimated_time_minutes": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "confidence_index": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "LLM self-evaluation of diagnostic certainty based on sample richness."
+        }
+      },
+      "example": {
+        "diagnostic_summary": "Learner demonstrates robust command of polynomial factorization using difference of squares, but exhibits systematic sign errors during parabolic vertex transformations under time constraints.",
+        "proficiency_level": "emerging",
+        "identified_misconceptions": [
+          {
+            "topic_id": "algebra.quadratics.vertex_form",
+            "misconception_name": "Sign negation omission in vertex coordinates",
+            "severity": "critical",
+            "evidence_question_ids": ["q_math_algebra_002"],
+            "detailed_rationale": "Learner applied h=-b/(2a) correctly to obtain the x-coordinate, but neglected coordinate sign inversion when writing y = a(x-h)^2 + k, confusing axis symmetry."
+          }
+        ],
+        "cognitive_strengths": [
+          "Rapid algebraic recognition of difference of two squares",
+          "Accurate computation of standard polynomial roots"
+        ],
+        "learning_gaps": [
+          {
+            "topic_id": "algebra.quadratics.vertex_form",
+            "gap_description": "Translating standard quadratic form ax^2+bx+c into completed square / vertex coordinates.",
+            "priority_rank": 1
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "action_type": "worked_example_study",
+            "target_topic": "algebra.quadratics.vertex_form",
+            "description": "Step-by-step contrast between vertex coordinate signs and parent parabola shifts.",
+            "estimated_time_minutes": 15
+          },
+          {
+            "action_type": "targeted_practice",
+            "target_topic": "algebra.quadratics.vertex_form",
+            "description": "5 targeted problems focusing on extracting (h, k) with alternating sign variations.",
+            "estimated_time_minutes": 10
+          }
+        ],
+        "confidence_index": 0.94
+      }
+    },
+
+    "assessment_submission_response": {
+      "endpoint": "Response from POST /api/assessments/submit/",
+      "description": "Composite API response delivered back to client containing combined mathematical/statistical score metrics and AI diagnostic results.",
+      "type": "object",
+      "required": [
+        "submission_id",
+        "assessment_id",
+        "user_id",
+        "status",
+        "processed_at",
+        "math_metrics",
+        "ai_diagnostic"
+      ],
+      "properties": {
+        "submission_id": { "type": "string", "format": "uuid" },
+        "assessment_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["completed", "processing", "failed"] },
+        "processed_at": { "type": "string", "format": "date-time" },
+        "math_metrics": {
+          "type": "object",
+          "required": [
+            "theta_score",
+            "standard_error",
+            "percentile_rank",
+            "raw_score",
+            "total_items",
+            "topic_mastery"
+          ],
+          "properties": {
+            "theta_score": { "type": "number", "description": "IRT Latent Ability (Theta) estimate." },
+            "standard_error": { "type": "number", "description": "IRT Standard Error of Measurement (SEM)." },
+            "percentile_rank": { "type": "number", "minimum": 0.0, "maximum": 100.0 },
+            "raw_score": { "type": "integer" },
+            "total_items": { "type": "integer" },
+            "topic_mastery": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Bayesian mastery probability (0.0 to 1.0)."
+              }
+            }
+          }
+        },
+        "ai_diagnostic": {
+          "$ref": "#/contracts/llm_diagnostic_output_payload"
+        }
+      }
+    }
+  }
+}
