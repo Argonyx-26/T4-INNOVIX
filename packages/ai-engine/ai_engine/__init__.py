@@ -5,7 +5,7 @@ Provides pure Python functions with standard exception handling for BE1 integrat
 """
 # Hackathon Core AI Engine (Gemini & Scikit-learn Stack)
 from .classifier import classify_behavior, train_and_export_model
-from .diagnostics import analyze_misconception
+from .cognitive_diagnostic import analyze_misconception
 from .generators import (
     generate_concept_graph,
     generate_intervention,

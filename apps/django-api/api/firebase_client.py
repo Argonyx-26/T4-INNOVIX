@@ -239,7 +239,8 @@ def update_student_state(
         has_misconception = False
         if diagnostic_data and isinstance(diagnostic_data, dict):
             has_misconception = bool(
-                diagnostic_data.get("status") == "misconception"
+                diagnostic_data.get("misconceptions")
+                or diagnostic_data.get("status") == "misconception"
                 or diagnostic_data.get("misconception")
                 or diagnostic_data.get("identified_misconceptions")
                 or str(diagnostic_data.get("severity", "")).lower() in ("critical", "high", "moderate")

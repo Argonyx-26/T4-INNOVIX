@@ -17,7 +17,8 @@ DEMO_DISTRIBUTION_ERROR_DIAGNOSIS: Dict[str, Any] = {
         {
             "concept_id": "distributive_property",
             "identified_misconception": "Distribution Sign and Constant Multiplier Omission",
-            "explanation": "You multiplied the variable but forgot to distribute the multiplier to the constant (2 * x + 3 = 10 -> 2x + 3 = 10 -> 2x = 7 -> x = 3.5)."
+            "explanation": "You multiplied the variable but forgot to distribute the multiplier to the constant (2 * x + 3 = 10 -> 2x + 3 = 10 -> 2x = 7 -> x = 3.5).",
+            "detected_in_items": ["item_demo_01"],
         }
     ],
     "recommended_interventions": [
@@ -29,27 +30,10 @@ DEMO_DISTRIBUTION_ERROR_DIAGNOSIS: Dict[str, Any] = {
             "actionable_steps": [
                 "Review visual grid area model demonstrating 2 * (x + 3) = 2x + 6",
                 "Complete 3 scaffolded single-step distribution drills",
-                "Retest and solve the multi-step equation 2(x + 3) = 10"
-            ]
+                "Retest and solve the multi-step equation 2(x + 3) = 10",
+            ],
         }
     ],
-    "status": "misconception",
-    "misconception": "Distribution Error",
-    "severity": "critical",
-    "diagnostic_summary": "Systemic Algebraic Misconception Detected: Distribution Error. Learner failed to distribute negative factor across binomial terms, resulting in 3.5.",
-    "identified_misconceptions": [
-        {
-            "topic_id": "algebra.distribution_rule",
-            "misconception_name": "Distribution Error",
-            "severity": "critical",
-            "detailed_rationale": "Learner evaluated a - (b + c) as a - b + c without propagating the negative sign across parentheses.",
-        }
-    ],
-    "suggested_action": "Immediate 1-on-1 worked example intervention on algebraic distribution.",
-    "confidence_index": 1.0,
-    "diagnosed_misconception": "Distribution Sign and Constant Multiplier Omission",
-    "confidence_score": 1.0,
-    "recommended_intervention_id": "dist_01",
 }
 
 

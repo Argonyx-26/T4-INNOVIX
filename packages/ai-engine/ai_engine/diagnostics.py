@@ -120,25 +120,8 @@ def analyze_misconception(
             top_expl = sanitized_misconceptions[0]["explanation"]
 
             return {
-                "diagnosed_misconception": top_misc,
-                "confidence_score": 0.92,
-                "recommended_intervention_id": str(sanitized_interventions[0].get("intervention_id", f"intv_{clean_cid[:6]}_01")),
                 "misconceptions": sanitized_misconceptions,
                 "recommended_interventions": sanitized_interventions,
-                "status": "misconception",
-                "misconception": top_misc,
-                "severity": "critical",
-                "diagnostic_summary": top_expl,
-                "identified_misconceptions": [
-                    {
-                        "topic_id": clean_cid,
-                        "misconception_name": top_misc,
-                        "severity": "critical",
-                        "detailed_rationale": top_expl,
-                    }
-                ],
-                "suggested_action": f"Targeted scaffolded drill on {concept}.",
-                "confidence_index": 0.92,
             }
 
         except Exception:
@@ -147,38 +130,24 @@ def analyze_misconception(
     # 3. High-fidelity fast deterministic fallback
     misc_title = f"Conceptual error in {concept.replace('_', ' ').title()}"
     return {
-        "diagnosed_misconception": misc_title,
-        "confidence_score": 0.88,
-        "recommended_intervention_id": f"intv_{clean_cid[:6]}_01",
         "misconceptions": [
             {
                 "concept_id": clean_cid,
                 "identified_misconception": misc_title,
-                "explanation": f"Student produced answer '{ans}' for concept '{concept}', demonstrating procedural slip."
+                "explanation": f"Student produced answer '{ans}' for concept '{concept}', demonstrating procedural slip.",
+                "detected_in_items": [f"item_{clean_cid}_01"],
             }
         ],
         "recommended_interventions": [
             {
                 "intervention_id": f"intv_{clean_cid[:6]}_01",
+                "title": f"Targeted Remediation for {concept.replace('_', ' ').title()}",
                 "type": "conceptual_reframing",
+                "priority": "high",
                 "actionable_steps": [
                     f"Review foundational principles of {concept.replace('_', ' ')}",
-                    "Work through 3 guided step-by-step example drills"
-                ]
+                    "Work through 3 guided step-by-step example drills",
+                ],
             }
         ],
-        "status": "misconception",
-        "misconception": misc_title,
-        "severity": "critical" if len(ans) > 0 else "moderate",
-        "diagnostic_summary": f"Student produced answer '{ans}' for concept '{concept}', demonstrating cognitive conflict.",
-        "identified_misconceptions": [
-            {
-                "topic_id": clean_cid,
-                "misconception_name": misc_title,
-                "severity": "critical",
-                "detailed_rationale": f"Answer '{ans}' conflicts with core principles of {concept}.",
-            }
-        ],
-        "suggested_action": f"Provide targeted scaffolded review for {concept}.",
-        "confidence_index": 0.88,
     }

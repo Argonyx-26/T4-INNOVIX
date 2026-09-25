@@ -64,7 +64,7 @@ The monorepo integration between **BE1 (Django Orchestrator & Deterministic Core
 
 ### Response JSON Keys:
 - **Root Keys:** `status`, `student_id`, `concept_id`, `new_mastery`, `retention_score`, `diagnosis`
-- **Diagnosis Keys:** `misconceptions`, `recommended_interventions`, `status`, `misconception`, `severity`, `diagnostic_summary`, `identified_misconceptions`, `suggested_action`, `confidence_index`, `diagnosed_misconception`, `confidence_score`, `recommended_intervention_id`
+- **Diagnosis Keys (Cleaned strictly to shared_types.json):** `misconceptions`, `recommended_interventions`
 
 ---
 
