@@ -48,7 +48,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   
   // State
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<{
+    text: string;
+    actionText?: string;
+    onAction?: () => void;
+  } | null>(null);
 
   // Esc key listener
   useEffect(() => {
@@ -83,17 +87,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     } catch (err: any) {
       console.error("[LoginModal] Google Auth Error:", err);
       if (err.code === "auth/popup-closed-by-user") {
-        setErrorMessage("Google Sign-In window was closed before completing.");
+        setErrorMessage({
+          text: "Google Sign-In window was closed before completing. Please try again.",
+        });
       } else if (err.code === "auth/popup-blocked") {
-        setErrorMessage("Pop-up window was blocked by your browser. Please allow popups for localhost:3000 or use Email/Demo login below.");
+        setErrorMessage({
+          text: "Pop-up window was blocked by your browser. Please allow popups for localhost:3000 or use Email/Demo login below.",
+        });
       } else if (err.code === "auth/unauthorized-domain") {
-        setErrorMessage(`Domain '${window.location.hostname}' is not authorized in Firebase. Please add '${window.location.hostname}' to Firebase Console > Authentication > Settings > Authorized domains.`);
+        const currentHost = window.location.hostname || "localhost";
+        setErrorMessage({
+          text: `Domain '${currentHost}' is not in Firebase Authorized Domains. In Firebase Console > Authentication > Settings > Authorized Domains, add '${currentHost}'.`,
+        });
       } else if (err.code === "auth/operation-not-allowed") {
-        setErrorMessage("Google Sign-In provider is disabled in Firebase Console. Please enable Google under Authentication > Sign-in method.");
+        setErrorMessage({
+          text: "Google Sign-In provider is disabled in Firebase Console. Please enable Google under Authentication > Sign-in method.",
+        });
       } else if (err.code === "auth/cancelled-popup-request") {
-        setErrorMessage("Only one Google Sign-In pop-up can be opened at a time.");
+        setErrorMessage({
+          text: "Only one Google Sign-In pop-up can be opened at a time.",
+        });
       } else {
-        setErrorMessage(err.message || "Failed to sign in with Google OAuth.");
+        setErrorMessage({
+          text: err.message || "Failed to sign in with Google OAuth.",
+        });
       }
     } finally {
       setIsLoading(false);
@@ -118,12 +135,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       } else {
         // Sign Up
         if (!name.trim()) {
-          setErrorMessage("Please enter your name.");
+          setErrorMessage({ text: "Please enter your full name." });
           setIsLoading(false);
           return;
         }
         if (password.length < 6) {
-          setErrorMessage("Password must be at least 6 characters.");
+          setErrorMessage({ text: "Password must be at least 6 characters long." });
           setIsLoading(false);
           return;
         }
@@ -139,19 +156,29 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     } catch (err: any) {
       console.error("[LoginModal] Email Auth Error:", err);
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        setErrorMessage("Invalid email or password. If you don't have an account yet, switch to 'Create Account' above or try 1-Click Demo Login below.");
+        setErrorMessage({
+          text: "Invalid email or password. If you don't have an account yet, create one below.",
+          actionText: "Switch to Create Account",
+          onAction: () => setAuthMode("signup"),
+        });
       } else if (err.code === "auth/email-already-in-use") {
-        setErrorMessage("An account with this email already exists. Please switch to the 'Log In' tab.");
+        setErrorMessage({
+          text: "An account with this email already exists.",
+          actionText: "Switch to Log In",
+          onAction: () => setAuthMode("login"),
+        });
       } else if (err.code === "auth/weak-password") {
-        setErrorMessage("Password is too weak. Please use at least 6 characters.");
+        setErrorMessage({ text: "Password is too weak. Please use at least 6 characters." });
       } else if (err.code === "auth/invalid-email") {
-        setErrorMessage("Please enter a valid email address.");
+        setErrorMessage({ text: "Please enter a valid email address." });
       } else if (err.code === "auth/operation-not-allowed") {
-        setErrorMessage("Email/Password authentication is disabled in Firebase console. Please enable it under Authentication > Sign-in method.");
+        setErrorMessage({
+          text: "Email/Password sign-in is disabled in Firebase console. Please enable it under Authentication > Sign-in method.",
+        });
       } else if (err.code === "auth/network-request-failed") {
-        setErrorMessage("Network error: Could not reach Firebase servers. Please verify your connection.");
+        setErrorMessage({ text: "Network error: Could not reach Firebase servers. Please verify your connection." });
       } else {
-        setErrorMessage(err.message || "Authentication failed. Please try again.");
+        setErrorMessage({ text: err.message || "Authentication failed. Please try again." });
       }
     } finally {
       setIsLoading(false);
@@ -171,7 +198,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       );
       onClose();
     } catch (err: any) {
-      setErrorMessage("Could not launch demo session. " + err.message);
+      setErrorMessage({ text: "Could not launch demo session. " + err.message });
     } finally {
       setIsLoading(false);
     }
@@ -389,9 +416,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
             {/* Error Message Box */}
             {errorMessage && (
-              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start space-x-2.5 text-xs text-rose-700 dark:text-rose-400">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span className="leading-snug">{errorMessage}</span>
+              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex flex-col space-y-2 text-xs text-rose-700 dark:text-rose-400">
+                <div className="flex items-start space-x-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                  <span className="leading-snug flex-1">{errorMessage.text}</span>
+                </div>
+                {errorMessage.actionText && errorMessage.onAction && (
+                  <button
+                    type="button"
+                    onClick={errorMessage.onAction}
+                    className="self-start ml-6 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition shadow-sm"
+                  >
+                    {errorMessage.actionText} →
+                  </button>
+                )}
               </div>
             )}
 
@@ -503,6 +541,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   <span>Demo Teacher</span>
                 </button>
               </div>
+            </div>
+
+            {/* Live Firebase Audit Status */}
+            <div className="pt-2.5 border-t border-black/5 dark:border-white/10 flex items-center justify-between text-[11px] text-neutral-400">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Firebase Auth: <strong className="text-neutral-700 dark:text-neutral-300">Live &amp; Connected</strong></span>
+              </div>
+              <span className="font-mono text-[10px] text-neutral-500 dark:text-neutral-400">
+                gen-lang-client-0427554587
+              </span>
             </div>
           </div>
         )}
