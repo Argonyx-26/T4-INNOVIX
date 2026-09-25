@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-canvas: #EFEFEE;
+    --text-primary: #141414;
+    --text-muted: #6B6B6B;
+    --accent-violet: #8266F0;
+    --accent-pink: #EC4899;
+    --surface-card: #FFFFFF;
+    --border-color: rgba(20, 20, 20, 0.08);
+  }
+
+  /* ADHD Focus Mode Variables */
+  body.mode-adhd {
+    --bg-canvas: #FBF2E4;
+    --text-primary: #1C1917;
+    --text-muted: #57534E;
+    --accent-violet: #1F5C52; /* Calming Teal */
+    --accent-pink: #F1645C;   /* Coral */
+    --surface-card: #FFFFFF;
+    --border-color: rgba(31, 92, 82, 0.15);
+    background-color: var(--bg-canvas) !important;
+  }
+
+  body.mode-adhd * {
+    transition-duration: 150ms !important;
+  }
+
+  /* Dyslexic Mode Variables */
+  body.mode-dyslexic {
+    --bg-canvas: #FAF8F5;
+    --text-primary: #18181B;
+    --text-muted: #52525B;
+    --accent-violet: #4F46E5;
+    --accent-pink: #DB2777;
+    --surface-card: #FFFFFF;
+    --border-color: rgba(24, 24, 27, 0.12);
+    font-family: 'Lexend', 'OpenDyslexic', sans-serif !important;
+    line-height: 1.85 !important;
+    letter-spacing: 0.05em !important;
+    word-spacing: 0.12em !important;
+    background-color: var(--bg-canvas) !important;
+  }
+
+  body.mode-dyslexic p,
+  body.mode-dyslexic h1,
+  body.mode-dyslexic h2,
+  body.mode-dyslexic h3,
+  body.mode-dyslexic span,
+  body.mode-dyslexic button,
+  body.mode-dyslexic input {
+    font-family: 'Lexend', 'OpenDyslexic', sans-serif !important;
+    line-height: 1.85 !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Fraunces', serif;
+  }
+}
+
+/* Custom Utilities */
+.editorial-shadow {
+  box-shadow: 0 12px 36px -8px rgba(20, 20, 20, 0.08), 0 4px 12px -2px rgba(20, 20, 20, 0.03);
+}
+
+.modal-backdrop {
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+}

@@ -1,9 +1,7 @@
-/**
- * LearnLens Frontend Firebase Client Initializer (Vite SPA)
- */
+/// <reference types="vite/client" />
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, doc, onSnapshot, collection, query, where } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 
 export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBthKMnShNRdfR4r4KaUfpVOWJ3ogQ4RZw",
@@ -17,24 +15,4 @@ export const firebaseConfig = {
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-
-export function subscribeToStudentMastery(studentId, domain, callback) {
-  const docRef = doc(db, "mastery_states", `${studentId}_${domain}`);
-  return onSnapshot(docRef, (snapshot) => {
-    if (snapshot.exists()) {
-      callback(snapshot.data());
-    }
-  });
-}
-
-export function subscribeToTriageAlerts(callback) {
-  const alertsCol = collection(db, "triage_alerts");
-  const q = query(alertsCol, where("status", "==", "NEEDS_INTERVENTION"));
-  return onSnapshot(q, (snapshot) => {
-    const alerts = [];
-    snapshot.forEach((d) => alerts.push({ id: d.id, ...d.data() }));
-    callback(alerts);
-  });
-}
-
 export default app;
