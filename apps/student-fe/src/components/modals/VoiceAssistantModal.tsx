@@ -57,9 +57,15 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
           }
         };
 
-        recognition.onerror = () => {
+        recognition.onerror = (event: any) => {
           setIsListening(false);
-          setAssistantResponse("Didn't catch that clearly. Please try speaking again or click a sample command.");
+          if (event.error === 'not-allowed') {
+            setAssistantResponse("Microphone access was denied. Please click the lock icon in your browser URL bar to allow microphone access.");
+          } else if (event.error === 'no-speech') {
+            setAssistantResponse("No speech was detected. Please check your microphone settings and try again.");
+          } else {
+            setAssistantResponse(`Microphone error (${event.error || 'unknown'}). Please try speaking again or click a sample command.`);
+          }
         };
 
         recognition.onend = () => {
@@ -67,11 +73,8 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
         };
 
         recognitionRef.current = recognition;
-        try {
-          recognition.start();
-        } catch {
-          // ignore if already started
-        }
+        // Removed auto-start to prevent browser permission blocks.
+        // Users must explicitly click the microphone to begin listening.
       } else {
         setAssistantResponse("Web Speech Recognition API is not supported in this browser environment. You can test sample commands below!");
       }

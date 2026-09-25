@@ -425,6 +425,56 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
               </button>
             </div>
           </div>
+
+          {/* Assigned Students Directory */}
+          <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm mt-8">
+            <div className="flex items-center space-x-2 mb-6">
+              <Users className="w-5 h-5 text-emerald-500" />
+              <h3 className="text-lg font-bold font-display text-neutral-900 dark:text-white">Assigned Students Roster</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {studentProfiles.length > 0 ? (
+                studentProfiles.map((student) => (
+                  <div key={student.id} className="p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-neutral-50 dark:bg-[#17171B] hover:border-[#8266F0]/50 transition group">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-bold text-sm text-neutral-900 dark:text-white group-hover:text-[#8266F0] transition">{student.name}</h4>
+                        <p className="text-[11px] text-neutral-500">{student.academicTier} • {student.learningStyle}</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#8266F0] to-[#EC4899] flex items-center justify-center text-white font-bold text-xs">
+                        {student.name.charAt(0)}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className="text-neutral-500">Overall Mastery</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.round(student.masteryScore * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-black/5 dark:bg-white/5 rounded-full h-1.5">
+                        <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.round(student.masteryScore * 100)}%` }} />
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        setActiveTab("comparison");
+                        window.location.hash = "#teacher-students";
+                      }}
+                      className="w-full py-2 rounded-xl bg-white dark:bg-[#2A2A35] border border-black/5 dark:border-white/5 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#343440] transition"
+                    >
+                      Review Full Details →
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-8 text-center text-sm text-neutral-500">
+                  Loading assigned students...
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -6,6 +6,9 @@ import {
 import { dataService } from "../services/dataService";
 import { EducationalResource, AcademicTier, AcademicDiscipline } from "../types";
 import { useThemeMode } from "../context/ThemeModeContext";
+import { useAuth } from "../context/AuthContext";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 export const EducationalResourceLibrary: React.FC = () => {
   const { addToast } = useThemeMode();
@@ -15,7 +18,38 @@ export const EducationalResourceLibrary: React.FC = () => {
   const [selectedMedium, setSelectedMedium] = useState<string>("All Media");
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("All Disciplines");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(["res-3blue1brown-algebra", "res-mit-ocw-binary-search"]);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  const [bookmarkedResources, setBookmarkedResources] = useState<EducationalResource[]>([]);
+  const [showOnlyBookmarks, setShowOnlyBookmarks] = useState(false);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      const loadBookmarks = async () => {
+        try {
+          const docRef = doc(db, "users", user.uid, "data", "bookmarks");
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            const ids = snap.data().savedIds || [];
+            const items = snap.data().savedResources || [];
+            setBookmarkedIds(ids);
+            setBookmarkedResources(items);
+            
+            // Merge into local state so they can be rendered if not currently in dataService payload
+            setResources((prev) => {
+              const prevIds = new Set(prev.map(p => p.id));
+              const newItems = items.filter((d: EducationalResource) => !prevIds.has(d.id));
+              return [...prev, ...newItems];
+            });
+          }
+        } catch (err) {
+          console.warn("Could not load bookmarks", err);
+        }
+      };
+      loadBookmarks();
+    }
+  }, [user]);
 
   useEffect(() => {
     dataService.getResources().then((data) => {
@@ -24,16 +58,52 @@ export const EducationalResourceLibrary: React.FC = () => {
     });
   }, []);
 
-  const toggleBookmark = (id: string, title: string) => {
-    setBookmarkedIds((prev) => {
-      const exists = prev.includes(id);
-      const next = exists ? prev.filter((item) => item !== id) : [...prev, id];
+  const handleUniversalSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      // Trigger the Gemini LLM search
+      const results = await dataService.searchUniversalLibrary(searchQuery);
+      setResources(results);
       addToast({
-        title: exists ? "Removed from Library Bookmarks" : "Saved to Learning Library",
-        description: `"${title}" has been updated in your personal revision drawer.`,
-        type: exists ? "info" : "success",
+        title: "Gemini Search Complete",
+        description: `Found ${results.length} multi-format resources for "${searchQuery}".`,
+        type: "success"
       });
-      return next;
+    } catch (err) {
+      addToast({
+        title: "Search Failed",
+        description: "Failed to reach the Gemini universal engine. Ensure your API key is set.",
+        type: "warning"
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const toggleBookmark = async (res: EducationalResource) => {
+    const exists = bookmarkedIds.includes(res.id);
+    const nextIds = exists ? bookmarkedIds.filter((item) => item !== res.id) : [...bookmarkedIds, res.id];
+    setBookmarkedIds(nextIds);
+    
+    const nextResources = exists
+      ? bookmarkedResources.filter(item => item.id !== res.id)
+      : [...bookmarkedResources, res];
+    setBookmarkedResources(nextResources);
+    
+    if (user) {
+      try {
+        const docRef = doc(db, "users", user.uid, "data", "bookmarks");
+        await setDoc(docRef, { savedIds: nextIds, savedResources: nextResources }, { merge: true });
+      } catch (err) {
+        console.error("Failed to sync bookmarks to database", err);
+      }
+    }
+
+    addToast({
+      title: exists ? "Removed from Library Bookmarks" : "Saved to Learning Library",
+      description: `"${res.title}" has been updated in your personal revision drawer.`,
+      type: exists ? "info" : "success",
     });
   };
 
@@ -47,18 +117,12 @@ export const EducationalResourceLibrary: React.FC = () => {
         if (selectedMedium === "Cheatsheets" && res.type !== "cheatsheet") return false;
       }
       if (selectedDiscipline !== "All Disciplines" && res.discipline !== selectedDiscipline) return false;
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = res.title.toLowerCase().includes(q);
-        const matchSource = res.source.toLowerCase().includes(q);
-        const matchSummary = res.summary.toLowerCase().includes(q);
-        const matchMisc = res.matchedMisconception.toLowerCase().includes(q);
-        return matchTitle || matchSource || matchSummary || matchMisc;
-      }
+      if (showOnlyBookmarks && !bookmarkedIds.includes(res.id)) return false;
+      
+      // We removed the frontend text filtering here because Gemini handles the semantic search!
       return true;
     });
-  }, [selectedTier, selectedMedium, selectedDiscipline, searchQuery]);
+  }, [selectedTier, selectedMedium, selectedDiscipline, resources, showOnlyBookmarks, bookmarkedIds]);
 
   const getTypeBadge = (type: EducationalResource["type"]) => {
     switch (type) {
@@ -113,13 +177,23 @@ export const EducationalResourceLibrary: React.FC = () => {
       <div className="bg-white dark:bg-[#1E1E24] rounded-3xl p-4 sm:p-6 border border-black/5 dark:border-white/10 shadow-sm mb-8 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            {isSearching ? (
+              <Loader2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8266F0] animate-spin" />
+            ) : (
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            )}
             <input
               type="text"
-              placeholder="Search by misconception, topic, institution, or keyword..."
+              placeholder="Search via Gemini AI (Press Enter)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#8266F0] text-sm"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleUniversalSearch();
+                }
+              }}
+              disabled={isSearching}
+              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#8266F0] text-sm disabled:opacity-50 transition"
             />
           </div>
 
@@ -160,6 +234,19 @@ export const EducationalResourceLibrary: React.FC = () => {
             <option value="Medicine & Physiology">Medicine & Physiology</option>
             <option value="Commerce & Finance">Commerce & Finance</option>
           </select>
+
+          {/* View Bookmarks Toggle */}
+          <button
+            onClick={() => setShowOnlyBookmarks(!showOnlyBookmarks)}
+            className={`px-4 py-3 rounded-2xl border text-sm font-bold transition flex items-center space-x-2 shrink-0 ${
+              showOnlyBookmarks 
+                ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300"
+                : "bg-neutral-100/70 dark:bg-white/5 border-black/5 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:border-amber-300 hover:text-amber-600"
+            }`}
+          >
+            <Bookmark className={`w-4 h-4 ${showOnlyBookmarks ? "fill-current" : ""}`} />
+            <span>{showOnlyBookmarks ? "Viewing Bookmarks" : "My Bookmarks"}</span>
+          </button>
         </div>
       </div>
 
@@ -183,7 +270,7 @@ export const EducationalResourceLibrary: React.FC = () => {
                   </span>
 
                   <button
-                    onClick={() => toggleBookmark(res.id, res.title)}
+                    onClick={() => toggleBookmark(res)}
                     className={`p-2 rounded-xl border transition ${
                       isSaved
                         ? "bg-amber-500/10 text-amber-500 border-amber-500/30"

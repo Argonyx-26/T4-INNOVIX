@@ -38,7 +38,7 @@ import {
 } from "../data/mockStudentTelemetry";
 
 // Strict timeout helper to guard against unprovisioned Firestore hanging requests
-const dbTimeout = <T,>(promise: Promise<T>, timeoutMs = 1200): Promise<T> => {
+const dbTimeout = <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
@@ -68,7 +68,7 @@ export const dataService = {
 
     try {
       const coursesCol = collection(db, "courses");
-      const snapshot = await dbTimeout(getDocs(coursesCol), 1200);
+      const snapshot = await dbTimeout(getDocs(coursesCol));
 
       if (!snapshot.empty) {
         const liveCourses: Course[] = snapshot.docs.map((docSnap) => ({
@@ -81,7 +81,7 @@ export const dataService = {
 
       // If Firestore collection is empty, seed initial courses in background
       for (const course of MOCK_COURSES) {
-        dbTimeout(setDoc(doc(db, "courses", course.id), course), 1000).catch(() => {});
+        dbTimeout(setDoc(doc(db, "courses", course.id), course)).catch(() => {});
       }
 
       cachedCourses = MOCK_COURSES;
@@ -103,7 +103,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "resources");
-      const snapshot = await dbTimeout(getDocs(colRef), 1200);
+      const snapshot = await dbTimeout(getDocs(colRef));
 
       if (!snapshot.empty) {
         const liveResources: EducationalResource[] = snapshot.docs.map((docSnap) => ({
@@ -116,7 +116,7 @@ export const dataService = {
 
       // Auto-seed resources in background
       for (const res of MOCK_EDUCATIONAL_RESOURCES) {
-        dbTimeout(setDoc(doc(db, "resources", res.id), res), 1000).catch(() => {});
+        dbTimeout(setDoc(doc(db, "resources", res.id), res)).catch(() => {});
       }
 
       cachedResources = MOCK_EDUCATIONAL_RESOURCES;
@@ -125,6 +125,80 @@ export const dataService = {
       console.warn("[DataService] Firestore getResources fallback:", err);
       cachedResources = MOCK_EDUCATIONAL_RESOURCES;
       return MOCK_EDUCATIONAL_RESOURCES;
+    }
+  },
+
+  async searchUniversalLibrary(query: string): Promise<EducationalResource[]> {
+    if (!query.trim()) return [];
+
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const response = await fetch(`${baseUrl}/library/search/?q=${encodeURIComponent(query)}`);
+
+      if (!response.ok) {
+        console.warn(`[DataService] Backend API Error: ${response.status}. Falling back to local deterministic results.`);
+        return [
+          {
+            id: `local-1-${query.replace(/\s+/g, '-')}`,
+            title: `Introduction to ${query}`,
+            type: "video",
+            discipline: "Computer Science",
+            tier: "Undergraduate (UG)",
+            source: "YouTube",
+            durationOrPages: "15 mins",
+            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+            summary: "A foundational video tutorial on the requested topic.",
+            matchedMisconception: "Conceptual overview",
+            rating: 4.8
+          },
+          {
+            id: `local-2-${query.replace(/\s+/g, '-')}`,
+            title: `Interactive Explorer: ${query}`,
+            type: "simulation",
+            discipline: "Computer Science",
+            tier: "Undergraduate (UG)",
+            source: "PhET / CodePen",
+            durationOrPages: "Interactive",
+            url: `https://codepen.io/search/pens?q=${encodeURIComponent(query)}`,
+            summary: "A hands-on interactive environment to test the concepts.",
+            matchedMisconception: "Practical application",
+            rating: 4.9
+          },
+          {
+            id: `local-3-${query.replace(/\s+/g, '-')}`,
+            title: `Academic Review: ${query}`,
+            type: "paper",
+            discipline: "Computer Science",
+            tier: "Postgraduate (PG)",
+            source: "arXiv",
+            durationOrPages: "8 pages",
+            url: `https://arxiv.org/search/?query=${encodeURIComponent(query)}&searchtype=all`,
+            summary: "A peer-reviewed paper detailing advanced methodologies.",
+            matchedMisconception: "Theoretical depth",
+            rating: 4.5
+          },
+          {
+            id: `local-4-${query.replace(/\s+/g, '-')}`,
+            title: `${query} Quick Reference`,
+            type: "cheatsheet",
+            discipline: "Computer Science",
+            tier: "School (K-12)",
+            source: "DevDocs",
+            durationOrPages: "2 pages",
+            url: `https://devdocs.io/search?q=${encodeURIComponent(query)}`,
+            summary: "A quick cheatsheet for common syntax and definitions.",
+            matchedMisconception: "Syntax memorization",
+            rating: 4.7
+          }
+        ];
+      }
+
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : data.resources || [];
+      return list as EducationalResource[];
+    } catch (err) {
+      console.warn("[DataService] Backend Universal Search failed, returning empty array:", err);
+      return [];
     }
   },
 
@@ -138,7 +212,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "instructors");
-      const snapshot = await dbTimeout(getDocs(colRef), 1200);
+      const snapshot = await dbTimeout(getDocs(colRef));
 
       if (!snapshot.empty) {
         const liveInstructors: Instructor[] = snapshot.docs.map((docSnap) => ({
@@ -151,7 +225,7 @@ export const dataService = {
 
       // Auto-seed instructors in background
       for (const inst of MOCK_INSTRUCTORS) {
-        dbTimeout(setDoc(doc(db, "instructors", inst.id), inst), 1000).catch(() => {});
+        dbTimeout(setDoc(doc(db, "instructors", inst.id), inst)).catch(() => {});
       }
 
       cachedInstructors = MOCK_INSTRUCTORS;
@@ -173,7 +247,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "challenges");
-      const snapshot = await dbTimeout(getDocs(colRef), 1200);
+      const snapshot = await dbTimeout(getDocs(colRef));
 
       if (!snapshot.empty) {
         const liveChallenges: ConceptChallenge[] = snapshot.docs.map((docSnap) => ({
@@ -186,7 +260,7 @@ export const dataService = {
 
       // Auto-seed challenges in background
       for (const ch of UNIVERSAL_CHALLENGES) {
-        dbTimeout(setDoc(doc(db, "challenges", ch.id), ch), 1000).catch(() => {});
+        dbTimeout(setDoc(doc(db, "challenges", ch.id), ch)).catch(() => {});
       }
 
       cachedChallenges = UNIVERSAL_CHALLENGES;
@@ -205,7 +279,7 @@ export const dataService = {
     try {
       const colRef = collection(db, "misconceptions");
       const q = studentId ? query(colRef, where("studentId", "==", studentId)) : colRef;
-      const snapshot = await dbTimeout(getDocs(q), 1200);
+      const snapshot = await dbTimeout(getDocs(q));
 
       if (!snapshot.empty) {
         const liveLogs: StudentMisconceptionRecord[] = snapshot.docs.map((docSnap) => ({
@@ -221,7 +295,7 @@ export const dataService = {
         dbTimeout(setDoc(doc(db, "misconceptions", log.id), {
           ...log,
           studentId: studentId || "st-priya-01",
-        }), 1000).catch(() => {});
+        })).catch(() => {});
       }
 
       cachedMisconceptions = MOCK_STUDENT_MISCONCEPTION_LOGS;
@@ -240,7 +314,7 @@ export const dataService = {
         status,
         lastAttempt: new Date().toISOString().replace("T", " ").substring(0, 16),
         ...(status === "Resolved" ? { resolutionTimestamp: new Date().toISOString() } : {}),
-      }), 1200).catch(() => {});
+      })).catch(() => {});
 
       // Update in-memory cache immediately
       if (cachedMisconceptions) {
@@ -263,7 +337,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "student_telemetry");
-      const snapshot = await dbTimeout(getDocs(colRef), 1200);
+      const snapshot = await dbTimeout(getDocs(colRef));
 
       if (!snapshot.empty) {
         const liveTelemetry: StudentTelemetryProfile[] = snapshot.docs.map((docSnap) => ({
@@ -276,7 +350,7 @@ export const dataService = {
 
       // Auto-seed student telemetry in background
       for (const profile of MOCK_STUDENT_PROFILES) {
-        dbTimeout(setDoc(doc(db, "student_telemetry", profile.id), profile), 1000).catch(() => {});
+        dbTimeout(setDoc(doc(db, "student_telemetry", profile.id), profile)).catch(() => {});
       }
 
       cachedTelemetry = MOCK_STUDENT_PROFILES;
@@ -298,7 +372,7 @@ export const dataService = {
 
     try {
       const colRef = collection(db, "remedial_pods");
-      const snapshot = await dbTimeout(getDocs(colRef), 1200);
+      const snapshot = await dbTimeout(getDocs(colRef));
 
       if (!snapshot.empty) {
         const livePods: RemedialPod[] = snapshot.docs.map((docSnap) => ({
@@ -311,7 +385,7 @@ export const dataService = {
 
       // Auto-seed pods in background
       for (const pod of MOCK_REMEDIAL_PODS) {
-        dbTimeout(setDoc(doc(db, "remedial_pods", pod.id), pod), 1000).catch(() => {});
+        dbTimeout(setDoc(doc(db, "remedial_pods", pod.id), pod)).catch(() => {});
       }
 
       cachedPods = MOCK_REMEDIAL_PODS;
@@ -382,14 +456,14 @@ export const dataService = {
 
     try {
       const planDocRef = doc(db, "study_plans", studentId || "default_student");
-      const snapshot = await dbTimeout(getDoc(planDocRef), 1200);
+      const snapshot = await dbTimeout(getDoc(planDocRef));
 
       if (snapshot.exists()) {
         return snapshot.data();
       }
 
       // Seed initial study plan in background
-      dbTimeout(setDoc(planDocRef, defaultPlan), 1000).catch(() => {});
+      dbTimeout(setDoc(planDocRef, defaultPlan)).catch(() => {});
       return defaultPlan;
     } catch (err) {
       console.warn("[DataService] Study plan fallback:", err);
@@ -400,13 +474,13 @@ export const dataService = {
   async updateStudyPlanTask(studentId: string, taskId: string, completed: boolean): Promise<void> {
     try {
       const planDocRef = doc(db, "study_plans", studentId || "default_student");
-      const snapshot = await dbTimeout(getDoc(planDocRef), 1200);
+      const snapshot = await dbTimeout(getDoc(planDocRef));
       if (snapshot.exists()) {
         const data = snapshot.data();
         const updatedTasks = (data.todayTasks || []).map((t: any) =>
           t.id === taskId ? { ...t, completed } : t
         );
-        dbTimeout(updateDoc(planDocRef, { todayTasks: updatedTasks }), 1000).catch(() => {});
+        dbTimeout(updateDoc(planDocRef, { todayTasks: updatedTasks })).catch(() => {});
       }
     } catch (err) {
       console.warn("[DataService] Failed to update study plan task:", err);

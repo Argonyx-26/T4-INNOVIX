@@ -181,3 +181,90 @@ def generate_verification_question(concept: str, resolved_misconception: str) ->
             "options": fallback_options,
             "correct_answer": fallback_options[1]
         }
+
+def generate_library_resources(query: str) -> List[Dict[str, Any]]:
+    """
+    Generates a list of educational resources for a given topic using Gemini.
+    Gracefully falls back to hardcoded resources on API failures.
+    """
+    fallback_resources = [
+        {
+            "id": f"fb-1-{query.replace(' ', '-')}",
+            "title": f"Introduction to {query.title()}",
+            "type": "video",
+            "discipline": "General Sciences",
+            "tier": "School (K-12)",
+            "source": "Khan Academy",
+            "durationOrPages": "10 mins",
+            "url": f"https://www.khanacademy.org/search?page_search_query={query}",
+            "summary": "A comprehensive introductory video breaking down the core concepts.",
+            "matchedMisconception": "Foundational gaps"
+        },
+        {
+            "id": f"fb-2-{query.replace(' ', '-')}",
+            "title": f"Advanced Concepts in {query.title()}",
+            "type": "paper",
+            "discipline": "General Sciences",
+            "tier": "Undergraduate (UG)",
+            "source": "Coursera",
+            "durationOrPages": "4 weeks",
+            "url": f"https://www.coursera.org/search?query={query}",
+            "summary": "Deep dive into academic theories and practical applications.",
+            "matchedMisconception": "Advanced application errors"
+        },
+        {
+            "id": f"fb-3-{query.replace(' ', '-')}",
+            "title": f"{query.title()} Crash Course",
+            "type": "video",
+            "discipline": "General Sciences",
+            "tier": "School (K-12)",
+            "source": "YouTube",
+            "durationOrPages": "15 mins",
+            "url": f"https://www.youtube.com/results?search_query=Crash+Course+{query}",
+            "summary": "Fast-paced visual explanation of the topic.",
+            "matchedMisconception": "Conceptual mapping"
+        }
+    ]
+
+    current_key = os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")
+    if not current_key or current_key.startswith("your_"):
+        print(f"[generators.py] No valid Gemini API Key found. Returning fallback resources for '{query}'.")
+        return fallback_resources
+
+    try:
+        if hasattr(genai, "get_key") and current_key != genai.get_key():
+            genai.configure(api_key=current_key)
+
+        prompt = f"""You are a universal educational library search engine. The student searched for: "{query}". 
+        Return a JSON array of exactly 4 highly relevant educational resources covering this topic. 
+        Mix different formats (videos, interactive simulators, research papers, cheatsheets).
+        Each object must EXACTLY match this structure:
+        {{
+            "id": "unique-id",
+            "title": "Resource Title",
+            "type": "video", // MUST BE EXACTLY ONE OF: "video", "simulation", "paper", "cheatsheet"
+            "discipline": "Mathematics",
+            "tier": "School (K-12)",
+            "source": "Platform Name (e.g. YouTube, Coursera, MIT OCW)",
+            "durationOrPages": "e.g. 15 mins or 5 pages",
+            "url": "https://example.com",
+            "summary": "Brief 2-sentence summary of what this teaches.",
+            "matchedMisconception": "The exact misunderstanding this solves."
+        }}
+        Return ONLY a valid JSON array. Do not include markdown blocks (```json) or any other text."""
+
+        search_model = genai.GenerativeModel("gemini-3.8-flash")
+        response = search_model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+
+        parsed_data = json.loads(response.text)
+        if isinstance(parsed_data, list):
+            return parsed_data
+        else:
+            raise ValueError("Response was not a JSON array")
+
+    except Exception as exc:
+        print(f"[generators.py] Error during generate_library_resources (503/ResourceExhausted likely): {exc}")
+        return fallback_resources
