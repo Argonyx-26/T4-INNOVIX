@@ -13,9 +13,11 @@ import { UNIVERSAL_CHALLENGES } from "../data/mockUniversalChallenges";
 import { MOCK_EDUCATIONAL_RESOURCES } from "../data/mockResources";
 import { InteractiveMindMap } from "../components/InteractiveMindMap";
 import { MisconceptionLogModal } from "../components/MisconceptionLogModal";
+import { useAuth } from "../context/AuthContext";
 
 export const LearnLensDiagnostic: React.FC = () => {
   const { mode, speak } = useThemeMode();
+  const { user } = useAuth();
 
   // Active Multi-Tier Challenge
   const [selectedChallengeId, setSelectedChallengeId] = useState<string>("math-school-linear");
@@ -71,10 +73,11 @@ export const LearnLensDiagnostic: React.FC = () => {
     const finalTimeMs = Date.now() - timerRef.current;
     const cleanAnswer = opt.label.replace(/^x\s*=\s*/i, "").trim();
 
-    // CRITICAL AUTH FIX: Strict anti-spoofing matching Django backend requirements
-    const mockToken = "mock-student_demo_01";
+    // Strict anti-spoofing matching Django backend requirements
+    const studentId = user?.uid || "student_demo_01";
+    const mockToken = `mock-${studentId}`;
     const payload = {
-      student_id: "student_demo_01",
+      student_id: studentId,
       concept_id: activeChallenge.discipline === "Computer Science" ? "binary_search" : "algebra",
       student_answer: cleanAnswer,
       time_ms: finalTimeMs,

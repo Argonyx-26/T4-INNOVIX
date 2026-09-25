@@ -13,9 +13,11 @@ import {
   Users, 
   Flame,
   Library,
-  BookOpenCheck
+  BookOpenCheck,
+  Briefcase
 } from "lucide-react";
 import { useThemeMode } from "../context/ThemeModeContext";
+import { useAuth } from "../context/AuthContext";
 
 interface NavbarProps {
   activeHash: string;
@@ -32,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { mode, setMode } = useThemeMode();
+  const { user, role, switchRole } = useAuth();
 
   const navLinks = [
     { label: "Home", hash: "#home", icon: Compass },
@@ -138,13 +141,47 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Login / Profile Button */}
-          <button
-            onClick={onOpenLogin}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[#141414] dark:bg-white dark:text-[#141414] hover:opacity-90 shadow-sm transition flex items-center space-x-2"
-          >
-            <User className="w-4 h-4" />
-            <span>Log in</span>
-          </button>
+          {user ? (
+            <button
+              onClick={onOpenLogin}
+              className="flex items-center space-x-2.5 p-1 sm:pr-3 rounded-2xl bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition border border-black/5 dark:border-white/10"
+              title="View profile & account settings"
+            >
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName}
+                  className="w-8 h-8 rounded-xl object-cover ring-1 ring-[#8266F0]"
+                />
+              ) : (
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-sm ${
+                  user.role === "teacher" ? "bg-gradient-to-tr from-[#EC4899] to-[#8266F0]" : "bg-gradient-to-tr from-[#8266F0] to-[#10B981]"
+                }`}>
+                  {user.displayName?.charAt(0) || "U"}
+                </div>
+              )}
+              <div className="text-left hidden sm:block">
+                <div className="text-xs font-bold text-[#141414] dark:text-white leading-tight truncate max-w-[110px]">
+                  {user.displayName?.split(" ")[0]}
+                </div>
+                <div className="flex items-center space-x-1">
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                    user.role === "teacher" ? "text-[#EC4899]" : "text-[#10B981]"
+                  }`}>
+                    {user.role === "teacher" ? "Faculty" : "Student"}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[#141414] dark:bg-white dark:text-[#141414] hover:opacity-90 shadow-sm transition flex items-center space-x-2"
+            >
+              <User className="w-4 h-4" />
+              <span>Log in</span>
+            </button>
+          )}
 
           {/* Mobile Menu Toggle */}
           <button
@@ -204,6 +241,46 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <span className="text-xs">{mode === "dyslexic" ? "Enabled ✓" : "Enable"}</span>
           </button>
+
+          {/* Mobile Auth Profile / Login Button */}
+          {user ? (
+            <div 
+              onClick={() => {
+                onOpenLogin();
+                setMobileMenuOpen(false);
+              }}
+              className="p-3 rounded-xl bg-neutral-200/60 dark:bg-white/10 flex items-center justify-between cursor-pointer"
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white ${
+                  user.role === "teacher" ? "bg-[#EC4899]" : "bg-[#8266F0]"
+                }`}>
+                  {user.displayName?.charAt(0) || "U"}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-[#141414] dark:text-white">
+                    {user.displayName}
+                  </div>
+                  <div className={`text-[10px] font-bold uppercase tracking-wider ${
+                    user.role === "teacher" ? "text-[#EC4899]" : "text-[#10B981]"
+                  }`}>
+                    {user.role === "teacher" ? "Faculty" : "Student"} • View Profile
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                onOpenLogin();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full p-3 rounded-xl bg-[#111111] dark:bg-white text-white dark:text-[#111111] font-bold text-sm flex items-center justify-center space-x-2 shadow-sm"
+            >
+              <User className="w-4 h-4" />
+              <span>Sign In / Sign Up</span>
+            </button>
+          )}
         </div>
       )}
     </header>
