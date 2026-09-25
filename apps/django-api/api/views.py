@@ -74,7 +74,7 @@ class AssessmentSubmitView(APIView):
         # ----------------------------------------------------------------------
         # MODE A: Multi-item Assessment Submission (shared_types.json contract)
         # ----------------------------------------------------------------------
-        if "responses" in payload:
+        if "responses" in payload or "concept_id" not in payload:
             serializer = AssessmentSubmissionSerializer(data=payload)
             if not serializer.is_valid():
                 return Response(
@@ -408,3 +408,5 @@ class FirebaseConfigView(APIView):
     def get(self, request, *args, **kwargs):
         from django.conf import settings
         return Response(getattr(settings, "FIREBASE_WEB_CONFIG", {}), status=status.HTTP_200_OK)
+
+

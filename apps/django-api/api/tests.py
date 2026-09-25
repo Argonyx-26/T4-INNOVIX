@@ -32,6 +32,7 @@ class LearnLensContractTestCase(TestCase):
         self.client = APIClient()
         possible_paths = [
             Path(__file__).resolve().parent.parent / "shared_types.json",
+            Path(__file__).resolve().parents[3] / "shared_types.json",
             Path(__file__).resolve().parent / "shared_types.json",
             Path.cwd() / "shared_types.json",
         ]
@@ -87,6 +88,7 @@ class LearnLensContractTestCase(TestCase):
             format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.json())
 
     def test_math_engine_calculations(self):
         """Verify statistical mastery and IRT theta computations."""
@@ -126,7 +128,7 @@ class LearnLensContractTestCase(TestCase):
             self.assertEqual(
                 response.status_code,
                 status.HTTP_200_OK,
-                f"Dummy profile '{profile_name}' failed with status {response.status_code}"
+                f"Dummy profile '{profile_name}' failed with status {response.status_code}: {response.content}"
             )
             data = response.json()
             self.assertEqual(data["assessment_id"], dummy_payload["assessment_id"])
@@ -137,6 +139,7 @@ class LearnLensContractTestCase(TestCase):
             self.assertIsInstance(data["learning_gaps"], list)
             self.assertIsInstance(data["misconceptions"], list)
             self.assertIsInstance(data["recommended_interventions"], list)
+            self.assertIsInstance(data["summary_narrative"], str)
 
     def test_pitch_demo_shortcut_3_5(self):
         """Verify the '3.5' answer immediately triggers the pitch demo distribution error."""
@@ -153,6 +156,8 @@ class LearnLensContractTestCase(TestCase):
         self.assertEqual(top_misc["concept_id"], "distributive_property")
         self.assertIn("Distribution", top_misc["identified_misconception"])
         self.assertIn("3.5", top_misc["explanation"])
+        self.assertGreater(len(data["recommended_interventions"]), 0)
+        self.assertEqual(data["recommended_interventions"][0]["intervention_id"], "dist_01")
 
     def test_mastered_student_submission(self):
         """Verify 100% correct responses yield complete mastery and 0 misconceptions."""
@@ -167,6 +172,7 @@ class LearnLensContractTestCase(TestCase):
         self.assertEqual(data["mastery_score"], 1.0)
         self.assertGreaterEqual(data["latent_ability_theta"], 2.0)
         self.assertEqual(len(data["misconceptions"]), 0)
+        self.assertIn("complete mastery", data["summary_narrative"].lower())
 
     def test_deep_misconception_student_submission(self):
         """Verify struggling student yields lower mastery, negative theta, and high priority interventions."""
@@ -180,6 +186,10 @@ class LearnLensContractTestCase(TestCase):
         data = response.json()
         self.assertLess(data["mastery_score"], 0.6)
         self.assertLess(data["latent_ability_theta"], 0.0)
+        self.assertGreater(len(data["misconceptions"]), 0)
+        self.assertGreater(len(data["recommended_interventions"]), 0)
+        priorities = [i.get("priority") for i in data["recommended_interventions"]]
+        self.assertIn("high", priorities)
 
     def test_cross_domain_cellular_biology_submission(self):
         """Verify domain-agnostic processing for cellular biology assessment."""
@@ -192,6 +202,7 @@ class LearnLensContractTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
         self.assertEqual(data["domain"], "cellular_biology")
+        self.assertIn("Cellular Biology", data["learning_gaps"][0]["concept_name"])
 
 
 class LearnLensRouterIntegrationTestCase(TestCase):

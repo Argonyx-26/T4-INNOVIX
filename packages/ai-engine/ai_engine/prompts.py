@@ -57,12 +57,28 @@ Identify the underlying cognitive root cause, misconception, or faulty mental mo
 
 You MUST respond strictly with a valid JSON object adhering to this schema:
 {
-  "diagnosed_misconception": "<Clear, concise description of the student's cognitive error>",
-  "confidence_score": <Float between 0.0 and 1.0 indicating diagnostic certainty>,
-  "prerequisite_gap": "<Foundational concept or prerequisite skill the learner is missing>",
-  "recommended_intervention_type": "<Identifier code such as 'dist_01', 'fraction_reciprocal_02', or 'algebra_step_03'>"
+  "misconceptions": [
+    {
+      "concept_id": "<snake_case concept identifier, e.g. distributive_property>",
+      "identified_misconception": "<Concise title of the misconception>",
+      "explanation": "<Detailed mechanistic explanation of why the thinking was flawed>"
+    }
+  ],
+  "recommended_interventions": [
+    {
+      "intervention_id": "<Unique intervention code, e.g. dist_01>",
+      "type": "<Pedagogical format: 'conceptual_reframing' | 'remedial_lesson' | 'practice_drill' | 'scaffolded_walkthrough'>",
+      "actionable_steps": [
+        "<Actionable remediation step 1>",
+        "<Actionable remediation step 2>"
+      ]
+    }
+  ]
 }
 
+Guidelines:
+1. 'misconceptions' must be a non-empty array of diagnosed cognitive fallacies.
+2. 'recommended_interventions' must be a non-empty array of pedagogical remediation actions.
 Do not include markdown codeblocks or extra text. Output raw JSON only.
 """
 
@@ -105,7 +121,7 @@ You MUST respond strictly with a valid JSON object adhering to this schema:
   "options": [
     "<Option A text>",
     "<Option B text>",
-    "<Option C text>",
+    "<Option B text>",
     "<Option D text>"
   ],
   "correct_answer": "<The exact string of the correct option>"

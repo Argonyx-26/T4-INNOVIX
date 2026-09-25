@@ -1,6 +1,6 @@
 """
 FILE 3: diagnostics.py
-Misconception Diagnosis & Prerequisite Reasoning using Google Gemini API or OpenAI SDK.
+Misconception Diagnosis & Prerequisite Reasoning using Google Gemini API or offline fallback.
 
 Analyzes incorrect student answers, identifies the cognitive root cause,
 and recommends pedagogical intervention types with JSON schema enforcement
@@ -58,7 +58,7 @@ def analyze_misconception(
     current_key = os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")
     if current_key and not current_key.startswith("your_") and model is not None:
         try:
-            if current_key != genai.get_key():
+            if hasattr(genai, "get_key") and current_key != genai.get_key():
                 genai.configure(api_key=current_key)
 
             prompt = (
@@ -115,9 +115,6 @@ def analyze_misconception(
                         "Complete 3 guided practice drills"
                     ]
                 }]
-
-            top_misc = sanitized_misconceptions[0]["identified_misconception"]
-            top_expl = sanitized_misconceptions[0]["explanation"]
 
             return {
                 "misconceptions": sanitized_misconceptions,

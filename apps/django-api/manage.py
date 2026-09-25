@@ -8,9 +8,12 @@ from pathlib import Path
 def main():
     """Run administrative tasks."""
     base_dir = Path(__file__).resolve().parent
-    packages_dir = base_dir / "packages" / "ai-engine"
-    if packages_dir.exists() and str(packages_dir) not in sys.path:
-        sys.path.insert(0, str(packages_dir))
+    for candidate in [
+        base_dir.parent.parent / "packages" / "ai-engine",
+        base_dir / "packages" / "ai-engine",
+    ]:
+        if candidate.exists() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
     try:

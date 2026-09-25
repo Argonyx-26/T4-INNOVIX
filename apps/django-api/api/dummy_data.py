@@ -5,7 +5,8 @@ Contains realistic student assessment submission payloads across multiple
 learning profiles (Careless slip, Deep misconception, Mastered learner,
 Pitch demo scenario, and Multi-domain).
 """
-from typing import Dict, Any
+import uuid
+from typing import Dict, Any, List
 
 
 DUMMY_STUDENT_CARELESS_SLIP: Dict[str, Any] = {
@@ -176,10 +177,12 @@ ALL_DUMMY_SUBMISSIONS: Dict[str, Dict[str, Any]] = {
 
 
 def get_dummy_submission(key: str) -> Dict[str, Any]:
+    """Retrieve dummy submission by profile key."""
     if key not in ALL_DUMMY_SUBMISSIONS:
         raise KeyError(f"Unknown dummy submission key: {key}. Available: {list(ALL_DUMMY_SUBMISSIONS.keys())}")
     return ALL_DUMMY_SUBMISSIONS[key]
 
 
 def get_all_dummy_submissions() -> Dict[str, Dict[str, Any]]:
+    """Return dictionary of all available dummy test submissions."""
     return ALL_DUMMY_SUBMISSIONS

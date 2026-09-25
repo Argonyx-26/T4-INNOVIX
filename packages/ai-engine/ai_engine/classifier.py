@@ -153,4 +153,3 @@ def classify_behavior(
         if t_ms < 5000 and att <= 1:
             return BehaviorTag("CARELESS")
         return BehaviorTag("MISCONCEPTION")
-

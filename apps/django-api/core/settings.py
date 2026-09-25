@@ -13,14 +13,21 @@ from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Monorepo package resolution hook
-PACKAGES_DIR = BASE_DIR / "packages" / "ai-engine"
-if PACKAGES_DIR.exists() and str(PACKAGES_DIR) not in sys.path:
-    sys.path.insert(0, str(PACKAGES_DIR))
+# Monorepo package resolution
+for candidate in [
+    BASE_DIR.parent.parent / "packages" / "ai-engine",
+    BASE_DIR / "packages" / "ai-engine",
+]:
+    if candidate.exists() and str(candidate) not in sys.path:
+        sys.path.insert(0, str(candidate))
 
 # Load unified environment variables (.env)
-load_dotenv(BASE_DIR / ".env")
+for env_path in [
+    BASE_DIR / ".env",
+    BASE_DIR.parent.parent / ".env",
+]:
+    if env_path.exists():
+        load_dotenv(env_path)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv(

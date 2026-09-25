@@ -1,0 +1,317 @@
+{
+  "timestamp": "2026-09-25 15:52:32",
+  "overall_status": "PASS",
+  "total_tests": 44,
+  "total_passed": 44,
+  "total_failed": 0,
+  "suites": [
+    {
+      "suite_name": "1. Django API & Contract Suite",
+      "total_tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "elapsed_seconds": 5.0117,
+      "details": [
+        {
+          "name": "test_ai_engine_synthesis",
+          "description": "Verify AI engine fallback returns valid structure adhering to schema.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_assessment_submission_contract_fidelity",
+          "description": "POST /api/assessments/submit/ accepts sample payload and returns valid LLM schema.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_assessment_submission_validation_error",
+          "description": "Submitting malformed payload triggers 400 Bad Request.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_cross_domain_cellular_biology_submission",
+          "description": "Verify domain-agnostic processing for cellular biology assessment.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_deep_misconception_student_submission",
+          "description": "Verify struggling student yields lower mastery, negative theta, and high priority interventions.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_dummy_submissions_all_profiles",
+          "description": "Verify all temporary dummy submissions pass through the API and obey the contract.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_health_check_endpoint",
+          "description": "GET /api/health/ returns 200 OK and status flags.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_mastered_student_submission",
+          "description": "Verify 100% correct responses yield complete mastery and 0 misconceptions.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_math_engine_calculations",
+          "description": "Verify statistical mastery and IRT theta computations.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_pitch_demo_shortcut_3_5",
+          "description": "Verify the '3.5' answer immediately triggers the pitch demo distribution error.",
+          "status": "PASS"
+        }
+      ],
+      "success": true
+    },
+    {
+      "suite_name": "2. Math Engine (IRT & Mastery) Suite",
+      "total_tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "elapsed_seconds": 0.0004,
+      "details": [
+        {
+          "name": "test_estimate_latent_ability_mixed_responses",
+          "description": "test_estimate_latent_ability_mixed_responses",
+          "status": "PASS"
+        },
+        {
+          "name": "test_estimate_latent_ability_perfect_and_zero_score",
+          "description": "test_estimate_latent_ability_perfect_and_zero_score",
+          "status": "PASS"
+        },
+        {
+          "name": "test_rasch_probability_bounds",
+          "description": "test_rasch_probability_bounds",
+          "status": "PASS"
+        },
+        {
+          "name": "test_rasch_probability_symmetry",
+          "description": "test_rasch_probability_symmetry",
+          "status": "PASS"
+        },
+        {
+          "name": "test_all_correct_no_hints",
+          "description": "test_all_correct_no_hints",
+          "status": "PASS"
+        },
+        {
+          "name": "test_all_incorrect_returns_zero",
+          "description": "test_all_incorrect_returns_zero",
+          "status": "PASS"
+        },
+        {
+          "name": "test_empty_responses_returns_zero",
+          "description": "test_empty_responses_returns_zero",
+          "status": "PASS"
+        },
+        {
+          "name": "test_hint_penalty_application",
+          "description": "test_hint_penalty_application",
+          "status": "PASS"
+        }
+      ],
+      "success": true
+    },
+    {
+      "suite_name": "3. AI Engine Phase 1 Test Suite",
+      "total_tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "elapsed_seconds": 0.0419,
+      "details": [
+        {
+          "name": "test_analyze_misconception_schema",
+          "description": "Verifies output contains exact 3 required keys with appropriate types.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_empty_arguments_raise_value_error",
+          "description": "Empty student answer or concept context raises ValueError.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_empty_subject_raises_value_error",
+          "description": "Empty subject string raises ValueError.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_generate_subject_ontology_structure",
+          "description": "Verifies ontology generation returns valid hierarchical concept tree.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_exception_inheritance",
+          "description": "test_exception_inheritance",
+          "status": "PASS"
+        },
+        {
+          "name": "test_careless_classification",
+          "description": "Fast response with single attempt is classified as CARELESS.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_invalid_attempts_raises_value_error",
+          "description": "Zero or negative attempts must raise ValueError.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_misconception_classification",
+          "description": "Slow response with multiple attempts is classified as MISCONCEPTION.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_negative_time_raises_value_error",
+          "description": "Negative timing must raise ValueError.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_type_error_on_non_numeric",
+          "description": "Non-numeric arguments must raise TypeError.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_empty_params_raise_value_error",
+          "description": "Missing parameters raise ValueError.",
+          "status": "PASS"
+        },
+        {
+          "name": "test_generate_verification_question_schema",
+          "description": "Verifies verification question contains options, answer key, and distractor diagnostic flags.",
+          "status": "PASS"
+        }
+      ],
+      "success": true
+    },
+    {
+      "suite_name": "4. AI Engine Phase 2/3 Granular Suite",
+      "total_tests": 9,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "elapsed_seconds": 0.026,
+      "details": [
+        {
+          "name": "test_careless_error_prediction",
+          "description": "test_careless_error_prediction",
+          "status": "PASS"
+        },
+        {
+          "name": "test_deep_misconception_prediction",
+          "description": "test_deep_misconception_prediction",
+          "status": "PASS"
+        },
+        {
+          "name": "test_keyword_arguments_flexibility",
+          "description": "test_keyword_arguments_flexibility",
+          "status": "PASS"
+        },
+        {
+          "name": "test_non_demo_answer_returns_none",
+          "description": "test_non_demo_answer_returns_none",
+          "status": "PASS"
+        },
+        {
+          "name": "test_pitch_demo_3_5_match",
+          "description": "test_pitch_demo_3_5_match",
+          "status": "PASS"
+        },
+        {
+          "name": "test_analyze_misconception_schema",
+          "description": "test_analyze_misconception_schema",
+          "status": "PASS"
+        },
+        {
+          "name": "test_generate_concept_graph_structure",
+          "description": "test_generate_concept_graph_structure",
+          "status": "PASS"
+        },
+        {
+          "name": "test_generate_intervention_structure",
+          "description": "test_generate_intervention_structure",
+          "status": "PASS"
+        },
+        {
+          "name": "test_generate_verification_question_structure",
+          "description": "test_generate_verification_question_structure",
+          "status": "PASS"
+        }
+      ],
+      "success": true
+    }
+  ],
+  "dummy_data_e2e": {
+    "total_profiles": 5,
+    "passed": 5,
+    "failed": 0,
+    "elapsed_seconds": 0.0842,
+    "success": true,
+    "profiles": [
+      {
+        "profile": "careless_slip",
+        "student_id": "student_careless_001",
+        "domain": "algebraic_equations",
+        "status_code": 200,
+        "latency_ms": 17.56,
+        "mastery_score": 0.5,
+        "latent_theta": 0.0,
+        "misconceptions_count": 1,
+        "interventions_count": 1,
+        "passed": true
+      },
+      {
+        "profile": "deep_misconception",
+        "student_id": "student_misconception_002",
+        "domain": "algebraic_equations",
+        "status_code": 200,
+        "latency_ms": 20.14,
+        "mastery_score": 0.3077,
+        "latent_theta": -0.6931,
+        "misconceptions_count": 2,
+        "interventions_count": 2,
+        "passed": true
+      },
+      {
+        "profile": "mastered",
+        "student_id": "student_mastery_003",
+        "domain": "algebraic_equations",
+        "status_code": 200,
+        "latency_ms": 19.6,
+        "mastery_score": 1.0,
+        "latent_theta": 2.5,
+        "misconceptions_count": 0,
+        "interventions_count": 0,
+        "passed": true
+      },
+      {
+        "profile": "cellular_biology",
+        "student_id": "student_bio_004",
+        "domain": "cellular_biology",
+        "status_code": 200,
+        "latency_ms": 16.14,
+        "mastery_score": 0.5455,
+        "latent_theta": 0.0,
+        "misconceptions_count": 1,
+        "interventions_count": 1,
+        "passed": true
+      },
+      {
+        "profile": "pitch_demo",
+        "student_id": "student_hackathon_pitch",
+        "domain": "algebraic_equations",
+        "status_code": 200,
+        "latency_ms": 10.38,
+        "mastery_score": 0.0,
+        "latent_theta": -2.5,
+        "misconceptions_count": 1,
+        "interventions_count": 1,
+        "passed": true
+      }
+    ]
+  }
+}
