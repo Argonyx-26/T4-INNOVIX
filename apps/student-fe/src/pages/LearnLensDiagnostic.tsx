@@ -640,6 +640,13 @@ export const LearnLensDiagnostic: React.FC = () => {
             </button>
 
             <a
+              href="#diagnostic-results"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-sm bg-[#141414] dark:bg-white text-white dark:text-[#141414] hover:opacity-90 transition text-center shadow-sm"
+            >
+              View Diagnostic Report →
+            </a>
+
+            <a
               href="#courses"
               className="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-bold text-sm bg-gradient-to-r from-[#8266F0] to-[#EC4899] text-white hover:opacity-95 shadow-lg shadow-[#8266F0]/25 transition text-center"
             >

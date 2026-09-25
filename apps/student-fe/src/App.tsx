@@ -11,6 +11,11 @@ import { LearningPath } from "./pages/LearningPath";
 import { Instructors } from "./pages/Instructors";
 import { TeacherInsightsView } from "./pages/TeacherInsightsView";
 import { EducationalResourceLibrary } from "./pages/EducationalResourceLibrary";
+import { StudentDashboard } from "./pages/StudentDashboard";
+import { MisconceptionCenter } from "./pages/MisconceptionCenter";
+import { DiagnosticReport } from "./pages/DiagnosticReport";
+import { StudyPlan } from "./pages/StudyPlan";
+import { StudentSettings } from "./pages/StudentSettings";
 import { VoiceAssistantModal } from "./components/modals/VoiceAssistantModal";
 import { SearchModal } from "./components/modals/SearchModal";
 import { CourseModal } from "./components/modals/CourseModal";
@@ -67,8 +72,16 @@ export const App: React.FC = () => {
   // Render the active view based on currentHash
   const renderActiveView = () => {
     switch (currentHash) {
+      case "#student":
+        return <StudentDashboard onNavigate={navigateTo} />;
       case "#diagnostic":
         return <LearnLensDiagnostic />;
+      case "#diagnostic-results":
+        return <DiagnosticReport onNavigate={navigateTo} />;
+      case "#misconceptions":
+        return <MisconceptionCenter onNavigate={navigateTo} />;
+      case "#plan":
+        return <StudyPlan onNavigate={navigateTo} />;
       case "#courses":
         return <CourseGrid onSelectCourse={setSelectedCourse} />;
       case "#pacing":
@@ -79,8 +92,20 @@ export const App: React.FC = () => {
         return <Instructors />;
       case "#library":
         return <EducationalResourceLibrary />;
+      case "#settings":
+        return <StudentSettings />;
       case "#teacher":
-        return <TeacherInsightsView />;
+        return <TeacherInsightsView initialTab="overview" />;
+      case "#teacher-triage":
+        return <TeacherInsightsView initialTab="kanban" />;
+      case "#teacher-students":
+        return <TeacherInsightsView initialTab="comparison" />;
+      case "#teacher-analytics":
+        return <TeacherInsightsView initialTab="analytics" />;
+      case "#teacher-interventions":
+        return <TeacherInsightsView initialTab="pods" />;
+      case "#teacher-intelligence":
+        return <TeacherInsightsView initialTab="rag-chatbot" />;
       case "#home":
       default:
         return (
