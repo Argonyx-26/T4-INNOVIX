@@ -12,7 +12,8 @@ import {
   Compass, 
   Users, 
   Flame,
-  Library
+  Library,
+  BookOpenCheck
 } from "lucide-react";
 import { useThemeMode } from "../context/ThemeModeContext";
 
@@ -30,7 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLogin,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { mode } = useThemeMode();
+  const { mode, setMode } = useThemeMode();
 
   const navLinks = [
     { label: "Home", hash: "#home", icon: Compass },
@@ -112,6 +113,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </button>
 
+          {/* OpenDyslexic Font Quick Toggle */}
+          <button
+            onClick={() => setMode(mode === "dyslexic" ? "normal" : "dyslexic")}
+            className={`p-2.5 rounded-xl transition flex items-center space-x-1.5 text-xs font-semibold ${
+              mode === "dyslexic"
+                ? "bg-[#10B981] text-white shadow-sm"
+                : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#141414] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+            }`}
+            title="Toggle OpenDyslexic Weighted Font"
+          >
+            <BookOpenCheck className="w-4 h-4" />
+            <span className="hidden xl:inline">OpenDyslexic</span>
+          </button>
+
           {/* Voice Assistant Trigger */}
           <button
             onClick={onOpenVoice}
@@ -171,6 +186,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               </a>
             );
           })}
+
+          <button
+            onClick={() => {
+              setMode(mode === "dyslexic" ? "normal" : "dyslexic");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-semibold transition ${
+              mode === "dyslexic"
+                ? "bg-[#10B981] text-white"
+                : "bg-black/5 dark:bg-white/10 text-[#141414] dark:text-white"
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <BookOpenCheck className="w-5 h-5" />
+              <span>OpenDyslexic Font</span>
+            </div>
+            <span className="text-xs">{mode === "dyslexic" ? "Enabled ✓" : "Enable"}</span>
+          </button>
         </div>
       )}
     </header>

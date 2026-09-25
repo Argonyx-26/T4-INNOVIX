@@ -23,10 +23,10 @@ export const ModeToggleWidget: React.FC = () => {
     },
     {
       id: "dyslexic",
-      label: "Dyslexia Friendly",
+      label: "OpenDyslexic Mode",
       icon: BookOpenCheck,
-      desc: "Lexend font, 1.85 line-spacing, interactive cursor reading ruler & speech audio assists.",
-      badge: "Accessibility",
+      desc: "OpenDyslexic weighted typography, 1.85 line-spacing, interactive cursor reading ruler & audio assists.",
+      badge: "OpenDyslexic",
     },
   ];
 

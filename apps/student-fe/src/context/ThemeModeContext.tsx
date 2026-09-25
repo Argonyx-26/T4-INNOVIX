@@ -66,7 +66,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       newMode === "adhd"
         ? "ADHD Focus Mode: Minimal cognitive load, warm cream background, high-focus styling."
         : newMode === "dyslexic"
-        ? "Dyslexia Friendly Mode: Lexend typography, reading ruler, and audio assists."
+        ? "Dyslexia Mode Active: OpenDyslexic weighted typography, reading ruler, and audio assists enabled."
         : "Standard Editorial Experience restored.",
       "info"
     );
