@@ -14,7 +14,7 @@ import {
   ExternalLink 
 } from "lucide-react";
 import { dataService } from "../services/dataService";
-import { Course } from "../types";
+import { useThemeMode } from "../context/ThemeModeContext";
 
 interface StudyPlanProps {
   onNavigate: (hash: string) => void;
@@ -22,14 +22,10 @@ interface StudyPlanProps {
 
 export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
   const [completedItems, setCompletedItems] = useState<string[]>(["item-1"]);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const { savedCourses } = useThemeMode();
 
   useEffect(() => {
-    Promise.all([
-      dataService.getCourses(),
-      dataService.getStudyPlan()
-    ]).then(([crs, plan]) => {
-      setCourses(crs);
+    dataService.getStudyPlan().then((plan) => {
       if (plan?.todayTasks) {
         setCompletedItems(
           plan.todayTasks.filter((t: any) => t.completed).map((t: any) => t.id)
@@ -260,7 +256,12 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
           </div>
 
           <div className="space-y-2.5">
-            {courses.slice(0, 2).map((c) => (
+            {savedCourses.length === 0 && (
+              <p className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 text-xs text-neutral-500 dark:text-neutral-400">
+                No saved courses yet. Tap the bookmark icon on any course to keep it here.
+              </p>
+            )}
+            {savedCourses.map((c) => (
               <div
                 key={c.id}
                 onClick={() => onNavigate("#courses")}

@@ -60,7 +60,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onSelect }) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                toggleBookmark(course.id);
+                toggleBookmark(course);
               }}
               className={`p-2 rounded-xl transition ${
                 isBookmarked

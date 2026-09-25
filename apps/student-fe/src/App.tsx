@@ -119,12 +119,7 @@ export const App: React.FC = () => {
             return <StudentDashboard onNavigate={navigateTo} />;
           }
         }
-        return (
-          <LandingPage
-            onSelectCourse={setSelectedCourse}
-            onNavigate={navigateTo}
-          />
-        );
+        return <LandingPage onNavigate={navigateTo} />;
     }
   };
 
@@ -146,8 +141,8 @@ export const App: React.FC = () => {
         {renderActiveView()}
       </main>
 
-      {/* Floating Mode Toggle Widget (z-[45]) */}
-      <ModeToggleWidget />
+      {/* Logged-out visitors get the mode switcher in the header instead. */}
+      {isAuthenticated && <ModeToggleWidget />}
 
       {/* Global Toast Alert Notification (z-[90]) */}
       {toast && (

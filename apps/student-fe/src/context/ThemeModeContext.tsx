@@ -1,5 +1,21 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { ThemeMode, ToastMessage } from "../types";
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
+import { Course, ThemeMode, ToastMessage } from "../types";
+import { useAuth } from "./AuthContext";
+import { dataService } from "../services/dataService";
+
+const GUEST_BOOKMARKS_KEY = "eduvia_guest_course_bookmarks";
+const LEGACY_BOOKMARKS_KEY = "eduvia_bookmarks";
+const userBookmarksCacheKey = (uid: string) => `eduvia_course_bookmarks_${uid}`;
+
+const readStoredCourses = (key: string): Course[] => {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((c) => c && typeof c === "object" && c.id) : [];
+  } catch {
+    return [];
+  }
+};
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -9,7 +25,8 @@ interface ThemeContextType {
   speak: (text: string) => void;
   stopSpeech: () => void;
   bookmarks: string[];
-  toggleBookmark: (courseId: string) => boolean;
+  savedCourses: Course[];
+  toggleBookmark: (course: Course) => boolean;
   toast: ToastMessage | null;
   showToast: (title: string, description?: string, type?: "info" | "success" | "warning") => void;
   addToast: (t: { title: string; description?: string; type?: "info" | "success" | "warning" }) => void;
@@ -30,21 +47,52 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [speechEnabled, setSpeechEnabled] = useState(true);
-  const [bookmarks, setBookmarks] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("eduvia_bookmarks");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          return [];
-        }
-      }
-    }
-    return ["course-linear-equations"];
-  });
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+
+  const [savedCourses, setSavedCourses] = useState<Course[]>(() => readStoredCourses(GUEST_BOOKMARKS_KEY));
+  const savedCoursesRef = useRef<Course[]>(savedCourses);
+  const commitSavedCourses = (next: Course[]) => {
+    savedCoursesRef.current = next;
+    setSavedCourses(next);
+  };
+  const bookmarks = useMemo(() => savedCourses.map((c) => c.id), [savedCourses]);
 
   const [toast, setToast] = useState<ToastMessage | null>(null);
+
+  // Load the signed-in user's bookmarks from Firestore, folding in anything saved while logged out.
+  useEffect(() => {
+    localStorage.removeItem(LEGACY_BOOKMARKS_KEY);
+
+    if (!uid) {
+      commitSavedCourses(readStoredCourses(GUEST_BOOKMARKS_KEY));
+      return;
+    }
+
+    let cancelled = false;
+    commitSavedCourses(readStoredCourses(userBookmarksCacheKey(uid)));
+
+    (async () => {
+      const guest = readStoredCourses(GUEST_BOOKMARKS_KEY);
+      try {
+        const remote = await dataService.getCourseBookmarks(uid);
+        const merged = [...remote, ...guest.filter((g) => !remote.some((r) => r.id === g.id))];
+        if (guest.length > 0) {
+          await dataService.saveCourseBookmarks(uid, merged);
+          localStorage.removeItem(GUEST_BOOKMARKS_KEY);
+        }
+        if (cancelled) return;
+        commitSavedCourses(merged);
+        localStorage.setItem(userBookmarksCacheKey(uid), JSON.stringify(merged));
+      } catch (err) {
+        console.warn("[Bookmarks] Could not load saved courses from the database; using local cache.", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
 
   // Sync mode with document body class
   useEffect(() => {
@@ -72,20 +120,42 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   };
 
-  const toggleBookmark = (courseId: string): boolean => {
-    let next: string[];
-    let isBookmarkedNow = false;
-    if (bookmarks.includes(courseId)) {
-      next = bookmarks.filter((id) => id !== courseId);
-      showToast("Bookmark Removed", "Course removed from your personal study planner.", "info");
-    } else {
-      next = [...bookmarks, courseId];
-      isBookmarkedNow = true;
-      showToast("Bookmarked!", "Saved to your study queue for quick offline reference.", "success");
+  const toggleBookmark = (course: Course): boolean => {
+    const prev = savedCoursesRef.current;
+    const wasSaved = prev.some((c) => c.id === course.id);
+    const next = wasSaved ? prev.filter((c) => c.id !== course.id) : [...prev, course];
+    commitSavedCourses(next);
+
+    if (!uid) {
+      localStorage.setItem(GUEST_BOOKMARKS_KEY, JSON.stringify(next));
+      showToast(
+        wasSaved ? "Bookmark Removed" : "Saved on This Device",
+        wasSaved ? `"${course.title}" was removed.` : "Log in to keep your saved courses in your account.",
+        wasSaved ? "info" : "success"
+      );
+      return !wasSaved;
     }
-    setBookmarks(next);
-    localStorage.setItem("eduvia_bookmarks", JSON.stringify(next));
-    return isBookmarkedNow;
+
+    localStorage.setItem(userBookmarksCacheKey(uid), JSON.stringify(next));
+    dataService
+      .saveCourseBookmarks(uid, next)
+      .then(() => {
+        showToast(
+          wasSaved ? "Bookmark Removed" : "Bookmarked!",
+          wasSaved ? `"${course.title}" was removed from your saved courses.` : `"${course.title}" is saved to your account.`,
+          wasSaved ? "info" : "success"
+        );
+      })
+      .catch((err) => {
+        console.warn("[Bookmarks] Failed to save to the database:", err);
+        // Roll back only if no newer toggle has happened since.
+        if (savedCoursesRef.current === next) {
+          commitSavedCourses(prev);
+          localStorage.setItem(userBookmarksCacheKey(uid), JSON.stringify(prev));
+        }
+        showToast("Couldn't Save Bookmark", "We couldn't reach the database. Please try again.", "warning");
+      });
+    return !wasSaved;
   };
 
   const speak = (text: string) => {
@@ -138,6 +208,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         speak,
         stopSpeech,
         bookmarks,
+        savedCourses,
         toggleBookmark,
         toast,
         showToast,
