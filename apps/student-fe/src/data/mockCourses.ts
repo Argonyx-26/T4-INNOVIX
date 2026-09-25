@@ -1,0 +1,232 @@
+import { Course } from "../types";
+
+export const MOCK_COURSES: Course[] = [
+  // SCHOOL (K-12)
+  {
+    id: "course-linear-equations",
+    title: "Class 9: Linear Equations in Two Variables",
+    grade: "Class 9",
+    tier: "School (K-12)",
+    discipline: "Mathematics",
+    category: "Core Curriculum",
+    duration: "4.5 Hours • 12 Interactive Modules",
+    rating: 4.95,
+    enrolledStudents: 6420,
+    prerequisites: ["One-Variable Equations", "Coordinate Axes Basics"],
+    misconceptionRisk: "Medium",
+    description: "Master algebraic graphing, coefficient substitution, and simultaneous elimination without common sign flips.",
+    instructor: {
+      name: "Dr. Ananya Sharma",
+      role: "Lead Cognitive STEM Specialist (IIT Delhi / MIT Media Lab)",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. The Geometry of Linear Pairs",
+        duration: "35 mins",
+        lessons: ["Cartesian Planes & Ordered Pairs", "Slope-Intercept intuition", "Visualizing 2x + 3y = 12"],
+      },
+      {
+        title: "2. Elimination & Sign Inversion Pitfalls",
+        duration: "50 mins",
+        lessons: ["Multiplying by Negatives Safely", "Elimination vs Substitution", "Common Sign Traps"],
+      },
+    ],
+  },
+  {
+    id: "course-quadratic-mastery",
+    title: "Class 10: Quadratic Equations & Parabolic Roots",
+    grade: "Class 10",
+    tier: "School (K-12)",
+    discipline: "Mathematics",
+    category: "Core Curriculum",
+    duration: "5.2 Hours • 14 Interactive Modules",
+    rating: 4.98,
+    enrolledStudents: 8190,
+    prerequisites: ["Linear Equations", "Polynomial Factoring"],
+    misconceptionRisk: "High",
+    description: "Deep dive into the discriminant, quadratic formula derivations, and geometric interpretations of roots.",
+    instructor: {
+      name: "Prof. Vikram Sen",
+      role: "Director of Mathematical Pedagogy (Stanford GSE)",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. Completing the Square Physically",
+        duration: "45 mins",
+        lessons: ["The Area Model of (x + b/2)²", "Why We Add (b/2)² to Both Sides", "Visualizing Missing Corners"],
+      },
+      {
+        title: "2. The Discriminant Radar",
+        duration: "40 mins",
+        lessons: ["Real vs Non-Real Roots", "The Tangent Vertex Point", "Graphing Parabolic Trajectories"],
+      },
+    ],
+  },
+  {
+    id: "course-kinematics-physics",
+    title: "Class 11: Newtonian Mechanics & Projectile Vectors",
+    grade: "Class 11",
+    tier: "School (K-12)",
+    discipline: "Natural Sciences",
+    category: "Foundations",
+    duration: "6.0 Hours • 16 Interactive Modules",
+    rating: 4.91,
+    enrolledStudents: 5200,
+    prerequisites: ["Trigonometry Ratios", "Basic Differentiation"],
+    misconceptionRisk: "High",
+    description: "Eliminate common confusions between velocity and acceleration vectors at trajectory apex points.",
+    instructor: {
+      name: "Dr. Arvind Sundaram",
+      role: "Visiting Research Scientist (IISc Bangalore)",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. Velocity vs Acceleration Disconnect",
+        duration: "50 mins",
+        lessons: ["Why Acceleration is Not Zero at the Apex", "Decoupling X and Y Components", "Free-fall Intuition"],
+      },
+    ],
+  },
+
+  // UNDERGRADUATE (UG)
+  {
+    id: "course-dsa-algorithms",
+    title: "UG: Data Structures, Asymptotic Bounds & Loop Invariants",
+    grade: "B.Tech Year 2",
+    tier: "Undergraduate (UG)",
+    discipline: "Computer Science",
+    category: "Core Curriculum",
+    duration: "8.5 Hours • 24 Interactive Modules",
+    rating: 4.99,
+    enrolledStudents: 14200,
+    prerequisites: ["Discrete Mathematics", "C++ / Java Memory Model"],
+    misconceptionRisk: "High",
+    description: "Master divide-and-conquer boundaries, binary search invariants, and dynamic memory allocation without pointer traps.",
+    instructor: {
+      name: "Dr. Rajesh Kulkarni",
+      role: "Professor of Computing Systems (IIT Bombay / ACM Fellow)",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. The Boundary Invariant Proofs",
+        duration: "60 mins",
+        lessons: ["Why high = mid - 1 Prevents Infinite Loops", "Loop Invariants Formalism", "Handling Even vs Odd Arrays"],
+      },
+      {
+        title: "2. Pointer Arithmetic & Aliasing Hazard",
+        duration: "55 mins",
+        lessons: ["Memory Layout on the Heap vs Stack", "Dangling Pointers & Double Free", "Pass by Reference Mechanics"],
+      },
+    ],
+  },
+  {
+    id: "course-human-physiology",
+    title: "UG: Cardiovascular Electrophysiology & Cellular Hemodynamics",
+    grade: "MBBS Year 1",
+    tier: "Undergraduate (UG)",
+    discipline: "Medicine & Physiology",
+    category: "Core Curriculum",
+    duration: "7.2 Hours • 18 Interactive Modules",
+    rating: 4.97,
+    enrolledStudents: 7850,
+    prerequisites: ["Cell Biology Basics", "Ion Electrochemical Gradients"],
+    misconceptionRisk: "High",
+    description: "Deep dive into action potential phase kinetics (Phases 0-4), delayed rectifier K+ channels, and Frank-Starling mechanics.",
+    instructor: {
+      name: "Dr. Kavita Nair",
+      role: "Associate Professor of Clinical Physiology (AIIMS New Delhi)",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. The Ventricular Action Potential Spectrum",
+        duration: "55 mins",
+        lessons: ["Phase 0 Na+ Influx vs Phase 3 K+ Efflux", "Why Ca2+ Influx Delays Repolarization", "Refractory Period Pharmacology"],
+      },
+    ],
+  },
+  {
+    id: "course-financial-accounting",
+    title: "UG: Financial Statement Analysis & Accrual Working Capital",
+    grade: "B.Com / BBA Year 2",
+    tier: "Undergraduate (UG)",
+    discipline: "Commerce & Finance",
+    category: "Foundations",
+    duration: "5.8 Hours • 15 Interactive Modules",
+    rating: 4.93,
+    enrolledStudents: 6900,
+    prerequisites: ["Double Entry Bookkeeping", "Balance Sheet Equation"],
+    misconceptionRisk: "Medium",
+    description: "Reconcile Net Income with Operating Cash Flow. Master indirect working capital adjustments without direction errors.",
+    instructor: {
+      name: "Meera Krishnan",
+      role: "Chartered Accountant & Former Big 4 Senior Auditor (IIM Ahmedabad)",
+      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. The Cash Flow Conversion Puzzle",
+        duration: "50 mins",
+        lessons: ["Why AR Growth Drains Cash", "Accounts Payable Settlement Dynamics", "Non-Cash Amortization and Taxes"],
+      },
+    ],
+  },
+
+  // POSTGRADUATE (PG) & PROFESSIONAL
+  {
+    id: "course-transformer-deep-learning",
+    title: "PG: Attention Mechanisms, Backpropagation & Foundation Models",
+    grade: "M.Tech / M.S. AI",
+    tier: "Postgraduate (PG)",
+    discipline: "Computer Science",
+    category: "Advanced",
+    duration: "10.0 Hours • 28 Interactive Modules",
+    rating: 4.99,
+    enrolledStudents: 11400,
+    prerequisites: ["Multivariable Calculus", "Linear Algebra Matrix Decomposition"],
+    misconceptionRisk: "High",
+    description: "Diagnose gradient vanishing, softmax saturation in multi-head attention, and layer normalization mechanics.",
+    instructor: {
+      name: "Dr. Rajesh Kulkarni",
+      role: "Professor of Computing Systems (IIT Bombay / ACM Fellow)",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. The Mathematical Gradient Highway",
+        duration: "65 mins",
+        lessons: ["Softmax Temperature Scaling Derivations", "Why Query-Key Dot Products Explode with High Dimension", "Residual Addition Gradient Flow"],
+      },
+    ],
+  },
+  {
+    id: "course-corporate-valuation",
+    title: "PG: Corporate Valuation, M&A Modeling & WACC Hurdle Rates",
+    grade: "MBA Year 2",
+    tier: "Postgraduate (PG)",
+    discipline: "Commerce & Finance",
+    category: "Advanced",
+    duration: "8.0 Hours • 20 Interactive Modules",
+    rating: 4.96,
+    enrolledStudents: 5900,
+    prerequisites: ["Corporate Finance Theory", "Discounted Cash Flow Basics"],
+    misconceptionRisk: "Medium",
+    description: "Unravel terminal value growth assumptions, debt tax shields, and circular debt scheduling in LBO models.",
+    instructor: {
+      name: "Meera Krishnan",
+      role: "Chartered Accountant & Former Big 4 Senior Auditor (IIM Ahmedabad)",
+      avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+    },
+    modules: [
+      {
+        title: "1. DCF Terminal Value Pitfalls",
+        duration: "60 mins",
+        lessons: ["The Gordon Growth Model Cap Constraint", "Unlevering and Relevering Beta", "Capital Structure Optimization"],
+      },
+    ],
+  }
+];
