@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Navbar } from "./components/Navbar";
+import { StudentShell } from "./components/StudentShell";
 import { ModeToggleWidget } from "./components/ModeToggleWidget";
 import { ReadingRuler } from "./components/ReadingRuler";
 import { LandingPage } from "./pages/LandingPage";
@@ -16,6 +17,7 @@ import { DiagnosticReport } from "./pages/DiagnosticReport";
 import { StudyPlan } from "./pages/StudyPlan";
 import { StudentSettings } from "./pages/StudentSettings";
 import { SelfStudy } from "./pages/SelfStudy";
+import { AITutor } from "./pages/AITutor";
 import { VoiceAssistantModal } from "./components/modals/VoiceAssistantModal";
 import { SearchModal } from "./components/modals/SearchModal";
 import { CourseModal } from "./components/modals/CourseModal";
@@ -28,6 +30,7 @@ import { Info, CheckCircle2, AlertTriangle, X } from "lucide-react";
 export const App: React.FC = () => {
   const { toast, dismissToast } = useThemeMode();
   const { isAuthenticated, role } = useAuth();
+  const isStudentShell = isAuthenticated && role === "student";
 
   // Route State via Hash
   const [currentHash, setCurrentHash] = useState<string>(() => {
@@ -96,6 +99,8 @@ export const App: React.FC = () => {
         return <EducationalResourceLibrary />;
       case "#settings":
         return <StudentSettings />;
+      case "#ai-tutor":
+        return <AITutor />;
       case "#self-study":
         return <SelfStudy />;
       case "#teacher":
@@ -128,21 +133,29 @@ export const App: React.FC = () => {
       {/* Dyslexia Interactive Reading Ruler (z-35) */}
       <ReadingRuler />
 
-      {/* Global Sticky Header (z-40) */}
-      <Navbar
-        activeHash={currentHash}
-        onOpenVoice={() => setVoiceModalOpen(true)}
-        onOpenSearch={() => setSearchModalOpen(true)}
-        onOpenLogin={() => setLoginModalOpen(true)}
-      />
+      {isStudentShell ? (
+        <StudentShell
+          activeHash={currentHash}
+          onNavigate={navigateTo}
+          onOpenSearch={() => setSearchModalOpen(true)}
+          onOpenVoice={() => setVoiceModalOpen(true)}
+        >
+          {renderActiveView()}
+        </StudentShell>
+      ) : (
+        <>
+          <Navbar
+            activeHash={currentHash}
+            onOpenVoice={() => setVoiceModalOpen(true)}
+            onOpenSearch={() => setSearchModalOpen(true)}
+            onOpenLogin={() => setLoginModalOpen(true)}
+          />
+          <main className="flex-1">{renderActiveView()}</main>
+        </>
+      )}
 
-      {/* Main Content Area */}
-      <main className="flex-1">
-        {renderActiveView()}
-      </main>
-
-      {/* Logged-out visitors get the mode switcher in the header instead. */}
-      {isAuthenticated && <ModeToggleWidget />}
+      {/* Students switch modes from the account menu; visitors from the header. */}
+      {isAuthenticated && !isStudentShell && <ModeToggleWidget />}
 
       {/* Global Toast Alert Notification (z-[90]) */}
       {toast && (

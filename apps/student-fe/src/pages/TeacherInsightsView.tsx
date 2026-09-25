@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { AiTestInsights } from "../components/teacher/AiTestInsights";
 import { 
   Users, AlertTriangle, TrendingDown, Sparkles, Filter, CheckCircle2, 
   BarChart3, RefreshCw, Send, Download, BookOpen, Clock, ShieldAlert, 
@@ -320,6 +321,8 @@ export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initia
               <span className="text-[11px] text-emerald-600 font-bold">+9% Retention</span>
             </div>
           </div>
+
+          <AiTestInsights />
 
           {/* Quick Jump Grid into Triage, Pods, and RAG */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

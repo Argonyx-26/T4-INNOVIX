@@ -14,7 +14,8 @@ import {
   doc, 
   updateDoc, 
   query, 
-  where
+  where,
+  writeBatch
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { 
@@ -27,6 +28,7 @@ import {
   RemedialPod,
   MisconceptionStatus 
 } from "../types";
+import type { TestAnalysis } from "./tutorService";
 import { MOCK_COURSES } from "../data/mockCourses";
 import { MOCK_EDUCATIONAL_RESOURCES } from "../data/mockResources";
 import { MOCK_INSTRUCTORS } from "../data/mockInstructors";
@@ -45,6 +47,82 @@ const dbTimeout = <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
       setTimeout(() => reject(new Error(`Database query timed out after ${timeoutMs}ms`)), timeoutMs)
     ),
   ]);
+};
+
+// A misconception pattern seen this many times across AI tests is flagged for teachers.
+export const REPEAT_THRESHOLD = 3;
+
+export interface AiMisconceptionRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  source: "ai-test";
+  conceptId: string;
+  conceptName: string;
+  discipline: string;
+  identifiedMisconception: string;
+  misconceptionKey: string;
+  explanation: string;
+  status: MisconceptionStatus;
+  firstDetected: string;
+  lastAttempt: string;
+  attemptCount: number;
+  flagged: boolean;
+  remedialInterventionTitle: string;
+  resolutionTimestamp: string;
+}
+
+export interface AiTestAttempt {
+  id: string;
+  studentId: string;
+  studentName: string;
+  topic: string;
+  difficulty: string;
+  discipline: string;
+  score: number;
+  total: number;
+  misconceptions: { key: string; title: string; count: number }[];
+  createdAt: string;
+  provider: string | null;
+}
+
+export interface LearnerModelState {
+  mastery: number;
+  confidence: number;
+  retention: number;
+  misconceptionActive: boolean;
+  lastEvent: string;
+  updatedAt: string;
+}
+
+export interface DayActivity {
+  day: string;
+  practice: number;
+  lessons: number;
+  review: number;
+  planning: number;
+}
+
+export interface WeeklyActivity {
+  thisWeek: DayActivity[];
+  lastWeek: DayActivity[];
+  isSample: boolean;
+}
+
+const day = (d: string, practice: number, lessons: number, review: number, planning: number): DayActivity => ({
+  day: d, practice, lessons, review, planning,
+});
+
+const SAMPLE_WEEKLY_ACTIVITY: WeeklyActivity = {
+  thisWeek: [
+    day("Mon", 20, 15, 10, 5), day("Tue", 15, 20, 5, 5), day("Wed", 10, 10, 10, 5),
+    day("Thu", 25, 15, 15, 5), day("Fri", 15, 10, 15, 5), day("Sat", 20, 20, 10, 5), day("Sun", 25, 25, 15, 10),
+  ],
+  lastWeek: [
+    day("Mon", 10, 10, 5, 5), day("Tue", 15, 10, 10, 5), day("Wed", 20, 15, 5, 5),
+    day("Thu", 10, 10, 10, 5), day("Fri", 5, 15, 5, 5), day("Sat", 15, 10, 10, 5), day("Sun", 20, 15, 10, 5),
+  ],
+  isSample: true,
 };
 
 // In-memory cache to guarantee sub-millisecond response times
@@ -510,7 +588,121 @@ export const dataService = {
   },
 
   // =========================================================================
-  // 10. COMPLETE DATABASE SEEDING UTILITY
+  // 10. DASHBOARD PREFERENCES & ACTIVITY
+  // =========================================================================
+  async getDashboardFavorites(uid: string): Promise<string[]> {
+    const snap = await dbTimeout(getDoc(doc(db, "users", uid, "data", "dashboard_prefs")));
+    return snap.exists() ? ((snap.data().favorites as string[]) || []) : [];
+  },
+
+  async saveDashboardFavorites(uid: string, favorites: string[]): Promise<void> {
+    await dbTimeout(
+      setDoc(
+        doc(db, "users", uid, "data", "dashboard_prefs"),
+        { favorites, updatedAt: new Date().toISOString() },
+        { merge: true }
+      )
+    );
+  },
+
+  // No activity tracking writes this document yet, so a missing document yields
+  // sample data flagged with isSample for the UI to label.
+  async getWeeklyActivity(uid: string): Promise<WeeklyActivity> {
+    try {
+      const snap = await dbTimeout(getDoc(doc(db, "users", uid, "data", "weekly_activity")));
+      if (snap.exists()) {
+        const data = snap.data() as Omit<WeeklyActivity, "isSample">;
+        if (Array.isArray(data.thisWeek) && Array.isArray(data.lastWeek)) {
+          return { ...data, isSample: false };
+        }
+      }
+    } catch (err) {
+      console.warn("[DataService] Weekly activity fallback:", err);
+    }
+    return SAMPLE_WEEKLY_ACTIVITY;
+  },
+
+  // =========================================================================
+  // 11. LEARNER MODEL & MISCONCEPTION MEMORY
+  // =========================================================================
+  async getLearnerModel(uid: string): Promise<Record<string, LearnerModelState>> {
+    const snap = await dbTimeout(getDoc(doc(db, "users", uid, "data", "learner_model")));
+    return snap.exists() ? ((snap.data().concepts as Record<string, LearnerModelState>) || {}) : {};
+  },
+
+  async saveLearnerModel(uid: string, conceptId: string, state: LearnerModelState): Promise<void> {
+    await dbTimeout(
+      setDoc(doc(db, "users", uid, "data", "learner_model"), { concepts: { [conceptId]: state } }, { merge: true })
+    );
+  },
+
+  async recordMisconception(uid: string, record: StudentMisconceptionRecord): Promise<void> {
+    const clean = JSON.parse(JSON.stringify(record));
+    await dbTimeout(setDoc(doc(db, "misconceptions", record.id), { ...clean, studentId: uid }, { merge: true }));
+  },
+
+  // =========================================================================
+  // 12. AI TUTOR TESTS
+  // =========================================================================
+  async getAiMisconceptions(uid: string): Promise<AiMisconceptionRecord[]> {
+    const q = query(collection(db, "misconceptions"), where("studentId", "==", uid), where("source", "==", "ai-test"));
+    const snapshot = await dbTimeout(getDocs(q));
+    return snapshot.docs.map((d) => ({ ...(d.data() as AiMisconceptionRecord), id: d.id }));
+  },
+
+  // Saves one finished test: bumps each misconception's running count and logs the attempt, atomically.
+  async recordAiTestResult(
+    uid: string,
+    studentName: string,
+    result: TestAnalysis,
+    previous: AiMisconceptionRecord[]
+  ): Promise<AiMisconceptionRecord[]> {
+    const now = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const batch = writeBatch(db);
+    const updated = result.misconceptions.map((m) => {
+      const id = `${uid}__ai__${m.key}`;
+      const prev = previous.find((p) => p.id === id);
+      const attemptCount = (prev?.attemptCount || 0) + m.count;
+      const record: AiMisconceptionRecord = {
+        id,
+        studentId: uid,
+        studentName,
+        source: "ai-test",
+        conceptId: `ai:${result.topic.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        conceptName: result.topic,
+        discipline: result.discipline,
+        identifiedMisconception: m.title,
+        misconceptionKey: m.key,
+        explanation: m.explanation,
+        status: "Detected",
+        firstDetected: prev?.firstDetected || now,
+        lastAttempt: now,
+        attemptCount,
+        flagged: attemptCount >= REPEAT_THRESHOLD,
+        remedialInterventionTitle: `AI tutor review: ${m.title}`,
+        resolutionTimestamp: "",
+      };
+      batch.set(doc(db, "misconceptions", id), record, { merge: true });
+      return record;
+    });
+    batch.set(doc(collection(db, "ai_test_attempts")), {
+      studentId: uid,
+      studentName,
+      topic: result.topic,
+      difficulty: result.difficulty,
+      discipline: result.discipline,
+      score: result.score,
+      total: result.total,
+      misconceptions: result.misconceptions.map(({ key, title, count }) => ({ key, title, count })),
+      createdAt: new Date().toISOString(),
+      provider: result.provider,
+    });
+    await dbTimeout(batch.commit());
+    return updated;
+  },
+
+  // =========================================================================
+  // 13. COMPLETE DATABASE SEEDING UTILITY
   // =========================================================================
   async seedAllCollections(): Promise<void> {
     console.log("[DataService] Seeding all application collections to Firestore...");

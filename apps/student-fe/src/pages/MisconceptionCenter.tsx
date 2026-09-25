@@ -22,6 +22,9 @@ import {
   Loader2
 } from "lucide-react";
 import { dataService } from "../services/dataService";
+import { useAuth } from "../context/AuthContext";
+import { PENDING_CHALLENGE_KEY } from "./LearnLensDiagnostic";
+import { PENDING_TUTOR_TOPIC_KEY } from "./AITutor";
 import { StudentMisconceptionRecord, MisconceptionStatus } from "../types";
 
 interface MisconceptionCenterProps {
@@ -36,12 +39,25 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("All");
   const [selectedRecord, setSelectedRecord] = useState<StudentMisconceptionRecord | null>(null);
 
+  const { user } = useAuth();
+
   useEffect(() => {
-    dataService.getStudentMisconceptions().then((data) => {
+    dataService.getStudentMisconceptions(user?.uid).then((data) => {
       setMisconceptions(data);
       setLoading(false);
     });
-  }, []);
+  }, [user?.uid]);
+
+  const practice = (record: StudentMisconceptionRecord) => {
+    const fromAiTest = record.conceptId.startsWith("ai:");
+    try {
+      if (fromAiTest) sessionStorage.setItem(PENDING_TUTOR_TOPIC_KEY, record.conceptName);
+      else sessionStorage.setItem(PENDING_CHALLENGE_KEY, record.conceptId);
+    } catch {
+      /* storage unavailable: the target page opens on its default state */
+    }
+    onNavigate(fromAiTest ? "#ai-tutor" : "#diagnostic");
+  };
 
   // Filter items
   const filteredRecords = misconceptions.filter((item) => {
@@ -228,7 +244,7 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
               </button>
 
               <button
-                onClick={() => onNavigate("#diagnostic")}
+                onClick={() => practice(item)}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-[#141414] dark:bg-white text-white dark:text-[#141414] hover:opacity-90 shadow-sm transition flex items-center space-x-1.5"
               >
                 <span>{item.status === "Resolved" ? "Verify Retention" : "Practice Challenge"}</span>
@@ -329,7 +345,7 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
               <button
                 onClick={() => {
                   setSelectedRecord(null);
-                  onNavigate("#diagnostic");
+                  practice(selectedRecord);
                 }}
                 className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#8266F0] to-[#EC4899] text-white hover:opacity-95 shadow transition flex items-center space-x-1.5"
               >

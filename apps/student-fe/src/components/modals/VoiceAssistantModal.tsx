@@ -204,7 +204,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                 LearnLens Voice Assistant
               </h3>
               <p className="text-xs text-[#6B6B6B] dark:text-slate-400">
-                Web Speech API • Real-Time Speech Commands
+                Cartesia Sonic AI • Natural Voice Commands
               </p>
             </div>
           </div>
