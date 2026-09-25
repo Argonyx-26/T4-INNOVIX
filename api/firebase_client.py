@@ -178,7 +178,14 @@ def update_student_state(
     db = get_firestore_db()
     now_iso = datetime.now(timezone.utc).isoformat()
     now_ts = time.time()
-    result = {"mastery_updated": False, "logged": False, "triage_alert": False}
+    result = {
+        "student_id": str(student_id),
+        "concept_id": str(concept_id),
+        "new_mastery": float(new_mastery),
+        "mastery_updated": False,
+        "logged": False,
+        "triage_alert": False,
+    }
 
     # 1. Update mastery_score & retention_score in 'mastery_states' collection
     try:

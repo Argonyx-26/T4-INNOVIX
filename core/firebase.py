@@ -8,7 +8,7 @@ Maps out the 4 conceptual Firestore collections:
 3. response_logs: Granular audit trail of individual item responses and timing data.
 4. triage_alerts: Real-time high-priority alerts pushed to Teacher Dashboards when deep misconceptions or drop-offs occur.
 
-Includes an in-memory FirestoreStubClient for local dev, offline demos, and CI testing.
+Includes an in-memory FirestoreStubClient and FirebaseStubAuth for local dev, offline demos, and CI testing.
 """
 
 import json
@@ -245,6 +245,27 @@ class FirestoreStubClient:
         return CollectionReferenceStub(name, self._collections)
 
 
+class FirebaseStubAuth:
+    """Mock authentication handler when live Firebase credentials are not supplied."""
+
+    @staticmethod
+    def verify_id_token(id_token: str, check_revoked: bool = False) -> Dict[str, Any]:
+        logger.warning(
+            "Firebase is operating in STUB MODE. Token '%s...' accepted as mock student.",
+            id_token[:10] if id_token else ""
+        )
+        uid = id_token.replace("mock-", "") if (id_token and id_token.startswith("mock-")) else "dev-student-user-001"
+        return {
+            "uid": uid,
+            "email": f"{uid}@learnlens.internal",
+            "name": "Dev Student",
+            "firebase": {
+                "sign_in_provider": "anonymous",
+                "identities": {}
+            },
+            "is_stub": True
+        }
+
 
 class FirebaseAdminStub:
     """
@@ -256,13 +277,7 @@ class FirebaseAdminStub:
         logger.info(f"FirebaseAdminStub initialized for project: {project_id}")
 
     def verify_id_token(self, id_token: str, check_revoked: bool = False) -> Dict[str, Any]:
-        logger.warning("Firebase Stub Mode active: Mock token verification.")
-        uid = id_token.replace("mock-", "") if id_token.startswith("mock-") else "mock-student-12345"
-        return {
-            "uid": uid,
-            "email": f"{uid}@learnlens.internal",
-            "is_stub": True,
-        }
+        return FirebaseStubAuth.verify_id_token(id_token, check_revoked)
 
 
 # --------------------------------------------------------------------------
@@ -294,6 +309,7 @@ def initialize_firebase_app():
 
         if firebase_admin._apps:
             _firebase_app = firebase_admin.get_app()
+            _is_stub_mode = False
             return _firebase_app
 
         cred = None
@@ -324,6 +340,9 @@ def initialize_firebase_app():
     return _firebase_app
 
 
+def initialize_firebase() -> Optional[Any]:
+    return initialize_firebase_app()
+
 
 def get_firestore_client():
     """
@@ -349,6 +368,26 @@ def get_firestore_client():
         logger.warning(f"[Firestore] Live client initialization error: {exc}. Using Stub client.")
         _firestore_client = FirestoreStubClient()
         return _firestore_client
+
+
+def get_auth_client():
+    """
+    Returns the Firebase auth module if live, or FirebaseStubAuth if in stub mode.
+    """
+    initialize_firebase_app()
+    if not _is_stub_mode:
+        try:
+            from firebase_admin import auth
+            return auth
+        except (ImportError, Exception):
+            pass
+    return FirebaseStubAuth
+
+
+def is_stub_mode() -> bool:
+    """Returns True if Firebase is currently running in development stub mode."""
+    initialize_firebase_app()
+    return _is_stub_mode
 
 
 def verify_id_token(id_token: str) -> Dict[str, Any]:
@@ -395,9 +434,10 @@ def sync_student_mastery_state(
     merged_concepts = dict(existing_concepts)
     for c_id, c_data in concept_updates.items():
         merged_concepts[c_id] = {
-            **merged_concepts.get(c_id, {}),
-            **c_data,
-            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "mastery_probability": float(c_data.get("mastery_probability", 0.50)),
+            "retention_score": float(c_data.get("retention_score", 1.0)),
+            "last_seen_timestamp": c_data.get("last_seen_timestamp", datetime.now(timezone.utc).isoformat()),
+            "attempt_count": int(c_data.get("attempt_count", 1)),
         }
 
     mastery_payload = {

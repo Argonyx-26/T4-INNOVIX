@@ -1,16 +1,108 @@
 """
-Serializers for LearnLens API.
-Defines strict validation for assessment submissions, diagnostic responses,
-and psychometric metrics.
+DRF Serializers for LearnLens Diagnostic Engine.
+Adheres strictly to shared_types.json specifications and supports both
+holistic multi-item assessment submissions and granular single-item diagnostics.
 """
-
 from rest_framework import serializers
 
 
+# ==============================================================================
+# 1. Multi-Item Assessment Serializers (Conforming to shared_types.json)
+# ==============================================================================
+
+class ItemResponseSerializer(serializers.Serializer):
+    """Serializer for individual item responses within an assessment."""
+    item_id = serializers.CharField(max_length=255)
+    user_answer = serializers.JSONField(
+        help_text="User's answer (string, number, boolean, or array)"
+    )
+    is_correct = serializers.BooleanField(required=False, allow_null=True, default=None)
+    time_spent_seconds = serializers.FloatField(min_value=0.0)
+    hints_used = serializers.IntegerField(default=0, min_value=0, required=False)
+    confidence_level = serializers.ChoiceField(
+        choices=["low", "medium", "high"],
+        required=False,
+        default="medium"
+    )
+
+
+class AssessmentSubmissionSerializer(serializers.Serializer):
+    """
+    Serializer validating incoming POST /api/assessments/submit/ payload.
+    Contract defined in shared_types.json -> AssessmentSubmissionPayload.
+    """
+    assessment_id = serializers.UUIDField()
+    student_id = serializers.CharField(max_length=255)
+    domain = serializers.CharField(max_length=255)
+    timestamp = serializers.DateTimeField(required=False)
+    responses = serializers.ListField(
+        child=ItemResponseSerializer(),
+        allow_empty=False
+    )
+    metadata = serializers.DictField(required=False, default=dict)
+
+
+class LearningGapSerializer(serializers.Serializer):
+    """Detailed conceptual deficiency identified in learner."""
+    concept_id = serializers.CharField(max_length=255, required=False)
+    topic_id = serializers.CharField(max_length=255, required=False)
+    concept_name = serializers.CharField(max_length=255, required=False)
+    severity = serializers.ChoiceField(choices=["critical", "moderate", "minor"], required=False, default="moderate")
+    description = serializers.CharField(required=False)
+    gap_description = serializers.CharField(required=False)
+    evidence_item_ids = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    priority_rank = serializers.IntegerField(min_value=1, required=False, default=1)
+
+
+class MisconceptionSerializer(serializers.Serializer):
+    """Cognitive fallacy or persistent flawed mental model."""
+    concept_id = serializers.CharField(max_length=255, required=False)
+    identified_misconception = serializers.CharField(max_length=255, required=False)
+    explanation = serializers.CharField(required=False)
+    detected_in_items = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+
+
+class RecommendedInterventionSerializer(serializers.Serializer):
+    """Actionable pedagogical intervention."""
+    intervention_id = serializers.CharField(max_length=255, required=False)
+    title = serializers.CharField(max_length=255, required=False)
+    type = serializers.ChoiceField(
+        choices=["remedial_lesson", "practice_drill", "conceptual_reframing", "scaffolded_walkthrough", "micro_lesson", "targeted_practice", "concept_map_review", "worked_example_study"],
+        required=False,
+        default="conceptual_reframing"
+    )
+    priority = serializers.ChoiceField(choices=["high", "medium", "low"], required=False, default="medium")
+    actionable_steps = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    action_type = serializers.CharField(required=False)
+    target_topic = serializers.CharField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
+    estimated_time_minutes = serializers.IntegerField(min_value=1, required=False)
+
+
+class LLMDiagnosticResponseSerializer(serializers.Serializer):
+    """
+    Serializer validating outgoing/LLM-generated diagnostic payload.
+    Contract defined in shared_types.json -> LLMDiagnosticResponse.
+    """
+    assessment_id = serializers.UUIDField()
+    student_id = serializers.CharField(max_length=255)
+    domain = serializers.CharField(max_length=255)
+    mastery_score = serializers.FloatField(min_value=0.0, max_value=1.0)
+    latent_ability_theta = serializers.FloatField()
+    learning_gaps = serializers.ListField(child=LearningGapSerializer(), default=list)
+    misconceptions = serializers.ListField(child=MisconceptionSerializer(), default=list)
+    recommended_interventions = serializers.ListField(child=RecommendedInterventionSerializer(), default=list)
+    summary_narrative = serializers.CharField()
+
+
+# ==============================================================================
+# 2. Granular Single-Item & BKT / Ebbinghaus Serializers (BE1 Specification)
+# ==============================================================================
+
 class AssessmentSubmissionRequestSerializer(serializers.Serializer):
     """
-    Strict validation for assessment submission requests (POST /api/assessments/submit/).
-    Enforces student identity, concept identifier, submission timing, and attempts.
+    Validation for single-concept assessment submission requests.
+    Used for BKT Bayesian updates, Ebbinghaus decay, and Firestore state sync.
     """
     student_id = serializers.CharField(
         max_length=128,
@@ -69,21 +161,6 @@ class IdentifiedMisconceptionSerializer(serializers.Serializer):
     severity = serializers.ChoiceField(choices=["critical", "moderate", "minor"])
     evidence_question_ids = serializers.ListField(child=serializers.CharField(), default=list)
     detailed_rationale = serializers.CharField()
-
-
-class LearningGapSerializer(serializers.Serializer):
-    topic_id = serializers.CharField(max_length=128)
-    gap_description = serializers.CharField()
-    priority_rank = serializers.IntegerField(min_value=1)
-
-
-class RecommendedInterventionSerializer(serializers.Serializer):
-    action_type = serializers.ChoiceField(
-        choices=["micro_lesson", "targeted_practice", "concept_map_review", "worked_example_study"]
-    )
-    target_topic = serializers.CharField(max_length=128)
-    description = serializers.CharField()
-    estimated_time_minutes = serializers.IntegerField(min_value=1)
 
 
 class LLMDiagnosticSerializer(serializers.Serializer):

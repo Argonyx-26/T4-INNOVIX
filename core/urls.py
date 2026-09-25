@@ -1,8 +1,7 @@
 """
 Root URL Configuration for LearnLens Backend.
-Routes incoming traffic to administrative interfaces and the decoupled API application.
+Routes incoming traffic to administrative interfaces, health checks, and the decoupled API application.
 """
-
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
@@ -10,7 +9,7 @@ from django.urls import include, path
 
 def health_check(request):
     """
-    Service health check endpoint designed for Render web service monitoring.
+    Root service health check endpoint designed for Render web service monitoring.
     """
     return JsonResponse(
         {
@@ -25,5 +24,5 @@ def health_check(request):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health_check, name="service-health-check"),
-    path("api/", include("api.urls")),
+    path("api/", include("api.urls", namespace="api")),
 ]

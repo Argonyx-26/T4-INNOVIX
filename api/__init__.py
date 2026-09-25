@@ -1,5 +1,3 @@
 """
-LearnLens API Application Package.
-Exposes REST endpoints, serializers, and handles orchestration between math and AI engines.
+API app module for LearnLens Backend.
 """
-default_app_config = "api.apps.ApiConfig"

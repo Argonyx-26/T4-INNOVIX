@@ -1,15 +1,18 @@
 """
-LearnLens Math Engine.
-Native Python module for statistical psychometrics, Item Response Theory (IRT),
-Bayesian Knowledge Tracing (BKT), and Ebbinghaus retention estimation.
+Math Engine package for LearnLens.
+Contains native Python statistical, psychometric, scoring, BKT, and retention algorithms.
 """
-
-from .bkt import calculate_bkt
+from .scoring import calculate_mastery_score, compute_assessment_metrics
+from .irt import estimate_latent_ability, rasch_probability
+from .bkt import calculate_bkt, calculate_new_mastery
 from .retention import calculate_retention
-from .scoring import compute_assessment_metrics
 
 __all__ = [
-    "calculate_bkt",
-    "calculate_retention",
+    "calculate_mastery_score",
     "compute_assessment_metrics",
+    "estimate_latent_ability",
+    "rasch_probability",
+    "calculate_bkt",
+    "calculate_new_mastery",
+    "calculate_retention",
 ]

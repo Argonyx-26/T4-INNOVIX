@@ -1,7 +1,10 @@
+"""
+App configuration for LearnLens API app.
+"""
 from django.apps import AppConfig
 
 
 class ApiConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "api"
-    verbose_name = "LearnLens Diagnostic API"
+    verbose_name = "LearnLens API"

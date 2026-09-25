@@ -1,7 +1,7 @@
 services:
   - type: web
     name: learnlens-backend
-    env: python
+    runtime: python
     region: oregon
     plan: starter
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate"
@@ -24,4 +24,7 @@ services:
         value: "gen-lang-client-0427554587"
       - key: OPENAI_MODEL
         value: "gpt-4o-mini"
-
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false

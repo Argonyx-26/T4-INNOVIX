@@ -1,14 +1,38 @@
 """
-BE2 Fallbacks Module for LearnLens AI Engine.
-Provides conference demo fallback bypass for planned errors.
-"""
+FILE 5: fallbacks.py
+Demo Matcher and Offline Safety Net for LearnLens backend (BE1 & BE2).
 
+Guarantees the live hackathon pitch works flawlessly even if the conference
+internet drops or the external LLM API is unavailable.
+Adheres strictly to the nested array schema defined in shared_types.json
+while supporting BE1 single-item router contracts.
+"""
 import re
-from typing import Any, Dict, Optional
+from typing import Optional, Dict, Any
 
 DEMO_REGEX = re.compile(r"^\s*3\.5\s*$")
 
-DEMO_DISTRIBUTION_ERROR_DIAGNOSIS = {
+DEMO_DISTRIBUTION_ERROR_DIAGNOSIS: Dict[str, Any] = {
+    "misconceptions": [
+        {
+            "concept_id": "distributive_property",
+            "identified_misconception": "Distribution Sign and Constant Multiplier Omission",
+            "explanation": "You multiplied the variable but forgot to distribute the multiplier to the constant (2 * x + 3 = 10 -> 2x + 3 = 10 -> 2x = 7 -> x = 3.5)."
+        }
+    ],
+    "recommended_interventions": [
+        {
+            "intervention_id": "dist_01",
+            "title": "Targeted Remediation for Distributive Property",
+            "type": "conceptual_reframing",
+            "priority": "high",
+            "actionable_steps": [
+                "Review visual grid area model demonstrating 2 * (x + 3) = 2x + 6",
+                "Complete 3 scaffolded single-step distribution drills",
+                "Retest and solve the multi-step equation 2(x + 3) = 10"
+            ]
+        }
+    ],
     "status": "misconception",
     "misconception": "Distribution Error",
     "severity": "critical",
@@ -23,14 +47,20 @@ DEMO_DISTRIBUTION_ERROR_DIAGNOSIS = {
     ],
     "suggested_action": "Immediate 1-on-1 worked example intervention on algebraic distribution.",
     "confidence_index": 1.0,
+    "diagnosed_misconception": "Distribution Sign and Constant Multiplier Omission",
+    "confidence_score": 1.0,
+    "recommended_intervention_id": "dist_01",
 }
 
 
 def get_demo_fallback(student_answer: Any) -> Optional[Dict[str, Any]]:
     """
-    Checks if student answer matches the planned demo error ('3.5').
-    If matched, returns hardcoded 'Distribution Error' diagnostic dict to bypass external LLM.
-    Otherwise returns None.
+    Offline safety net for the live hackathon pitch.
+    Detects known demo inputs ('3.5') and returns instant, deterministic diagnostic responses
+    matching the nested schema defined in shared_types.json.
+
+    :param student_answer: Raw student answer string or number.
+    :return: Hardcoded diagnostic dictionary if matched, or None signaling BE1 to call live diagnostic engine.
     """
     if student_answer is None:
         return None

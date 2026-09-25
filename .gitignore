@@ -1,15 +1,38 @@
-# Python
+# Python Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
 env/
 venv/
 .venv/
 ENV/
+env.bak/
+venv.bak/
 
-# Django
+# Django & SQLite
 *.log
 local_settings.py
 db.sqlite3
@@ -17,17 +40,19 @@ db.sqlite3-journal
 media/
 staticfiles/
 
-# Firebase & Secrets
+# Firebase & Secret credentials
 *.pem
 *firebase*.json
-*.env
+service-account*.json
+.env
 !.env.example
 
-# IDE
+# IDE files
 .vscode/
 .idea/
 *.swp
+*~
 
-# OS
+# OS specific files
 .DS_Store
 Thumbs.db

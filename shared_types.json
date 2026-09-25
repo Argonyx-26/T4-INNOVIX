@@ -1,362 +1,350 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "LearnLens Shared Contract Types",
-  "description": "Standardized schema contract for LearnLens backend developers, isolating API contracts, statistical outputs, and LLM diagnostic formats.",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LearnLensSharedContracts",
+  "description": "Strict contract definitions for LearnLens educational diagnostic engine. Adhered to by both API and AI/Math engine developers.",
   "version": "1.0.0",
-  "contracts": {
-    "assessment_submission_request": {
-      "endpoint": "POST /api/assessments/submit/",
-      "description": "Exact JSON payload expected by POST /api/assessments/submit/ from client applications.",
+  "definitions": {
+    "AssessmentSubmissionPayload": {
       "type": "object",
+      "description": "Exact JSON payload expected by POST /api/assessments/submit/",
       "required": [
         "assessment_id",
-        "user_id",
-        "subject_domain",
-        "started_at",
-        "completed_at",
+        "student_id",
+        "domain",
         "responses"
       ],
       "properties": {
         "assessment_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Unique identifier of the assessment session."
+          "description": "Unique identifier for the diagnostic assessment session."
         },
-        "user_id": {
+        "student_id": {
           "type": "string",
-          "description": "Unique ID of the student/learner (Firebase UID or system ID)."
+          "description": "Unique identifier for the student/learner."
         },
-        "subject_domain": {
+        "domain": {
           "type": "string",
-          "enum": ["mathematics", "physics", "chemistry", "biology", "computer_science", "reading_comprehension", "general_stem"],
-          "description": "Domain-agnostic subject categorization for diagnostic calibration."
+          "description": "Educational domain (e.g., 'algebra', 'mechanics', 'molecular_biology')."
         },
-        "grade_or_target_level": {
-          "type": "string",
-          "description": "Grade level or target difficulty baseline (e.g. 'Grade 10', 'Undergraduate', 'K-12 Tier 3')."
-        },
-        "started_at": {
+        "timestamp": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO-8601 timestamp when the assessment started."
-        },
-        "completed_at": {
-          "type": "string",
-          "format": "date-time",
-          "description": "ISO-8601 timestamp when the assessment was submitted."
-        },
-        "metadata": {
-          "type": "object",
-          "properties": {
-            "client_version": { "type": "string" },
-            "device_platform": { "type": "string" },
-            "proctoring_flags": { "type": "array", "items": { "type": "string" } }
-          },
-          "additionalProperties": true
+          "description": "ISO-8601 timestamp of assessment submission."
         },
         "responses": {
           "type": "array",
+          "description": "List of student responses across assessment items.",
           "minItems": 1,
           "items": {
-            "type": "object",
-            "required": [
-              "question_id",
-              "item_difficulty",
-              "is_correct",
-              "response_time_ms",
-              "topic_id"
-            ],
-            "properties": {
-              "question_id": {
-                "type": "string",
-                "description": "Unique identifier of the question item."
-              },
-              "topic_id": {
-                "type": "string",
-                "description": "Concept/sub-domain taxonomy tag (e.g. 'algebra.quadratics', 'optics.refraction')."
-              },
-              "item_difficulty": {
-                "type": "number",
-                "minimum": -4.0,
-                "maximum": 4.0,
-                "description": "Calibrated IRT b-parameter (difficulty)."
-              },
-              "item_discrimination": {
-                "type": "number",
-                "minimum": 0.0,
-                "default": 1.0,
-                "description": "IRT a-parameter (discrimination coefficient)."
-              },
-              "selected_option_id": {
-                "type": "string",
-                "description": "ID of selected multiple-choice option (if applicable)."
-              },
-              "free_text_answer": {
-                "type": "string",
-                "description": "Student's raw textual or numerical explanation/work (if applicable)."
-              },
-              "is_correct": {
-                "type": "boolean",
-                "description": "Direct correctness flag (scored client-side or by validator)."
-              },
-              "response_time_ms": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Latency in milliseconds spent answering the question."
-              },
-              "attempt_count": {
-                "type": "integer",
-                "minimum": 1,
-                "default": 1,
-                "description": "Number of attempts on this specific question."
-              },
-              "confidence_score": {
-                "type": "number",
-                "minimum": 1.0,
-                "maximum": 5.0,
-                "description": "Self-reported confidence level (1 = pure guess, 5 = absolute certainty)."
-              }
-            }
+            "$ref": "#/definitions/ItemResponse"
           }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Optional contextual client metadata (grade level, school, etc.).",
+          "additionalProperties": true
         }
       },
-      "example": {
-        "assessment_id": "7f9a6e12-8822-4469-8e7c-d6b38c21ad90",
-        "user_id": "usr_firebase_984712",
-        "subject_domain": "mathematics",
-        "grade_or_target_level": "Grade 10",
-        "started_at": "2026-09-25T12:30:00Z",
-        "completed_at": "2026-09-25T13:00:00Z",
-        "metadata": {
-          "client_version": "v1.4.2",
-          "device_platform": "web"
-        },
-        "responses": [
-          {
-            "question_id": "q_math_algebra_001",
-            "topic_id": "algebra.polynomials.factoring",
-            "item_difficulty": 0.45,
-            "item_discrimination": 1.2,
-            "selected_option_id": "opt_c",
-            "free_text_answer": "Factored using difference of squares: (x-3)(x+3)",
-            "is_correct": true,
-            "response_time_ms": 34200,
-            "attempt_count": 1,
-            "confidence_score": 4.5
-          },
-          {
-            "question_id": "q_math_algebra_002",
-            "topic_id": "algebra.quadratics.vertex_form",
-            "item_difficulty": 1.15,
-            "item_discrimination": 1.35,
-            "selected_option_id": "opt_a",
-            "free_text_answer": "h = -b/2a which gave 2, but forgot negative sign on k",
-            "is_correct": false,
-            "response_time_ms": 58900,
-            "attempt_count": 2,
-            "confidence_score": 2.0
-          }
-        ]
-      }
+      "additionalProperties": false
     },
-
-    "llm_diagnostic_output_payload": {
-      "producer": "ai_engine.prompts.diagnostic_agent / OpenAI Structured Output",
-      "description": "Exact JSON payload that the LLM must return for diagnostic synthesis and remediation planning. Must strictly match this schema.",
+    "ItemResponse": {
       "type": "object",
       "required": [
-        "diagnostic_summary",
-        "proficiency_level",
-        "identified_misconceptions",
-        "cognitive_strengths",
-        "learning_gaps",
-        "recommended_interventions",
-        "confidence_index"
+        "item_id",
+        "user_answer",
+        "time_spent_seconds"
       ],
       "properties": {
-        "diagnostic_summary": {
+        "item_id": {
           "type": "string",
-          "description": "Executive synthesis of the learner's overall conceptual and procedural performance."
+          "description": "Unique identifier for the diagnostic question/item."
         },
-        "proficiency_level": {
+        "user_answer": {
+          "type": ["string", "number", "boolean", "array"],
+          "description": "The response given by the learner."
+        },
+        "is_correct": {
+          "type": ["boolean", "null"],
+          "description": "Pre-graded correctness flag if evaluated client-side, otherwise null."
+        },
+        "time_spent_seconds": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Duration spent on this item in seconds."
+        },
+        "hints_used": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Number of hints accessed for this problem."
+        },
+        "confidence_level": {
           "type": "string",
-          "enum": ["novice", "emerging", "proficient", "advanced", "master"],
-          "description": "Standardized qualitative mastery tier synthesized from statistical and textual work."
+          "enum": ["low", "medium", "high"],
+          "default": "medium",
+          "description": "Self-reported confidence level."
+        }
+      },
+      "additionalProperties": false
+    },
+    "LearningGap": {
+      "type": "object",
+      "required": [
+        "concept_id",
+        "concept_name",
+        "severity",
+        "description",
+        "evidence_item_ids"
+      ],
+      "properties": {
+        "concept_id": {
+          "type": "string",
+          "description": "Machine-readable identifier of the specific concept gap."
         },
-        "identified_misconceptions": {
-          "type": "array",
-          "description": "Specific conceptual flaws, procedural errors, or cognitive traps identified from erroneous answers and student explanations.",
-          "items": {
-            "type": "object",
-            "required": [
-              "topic_id",
-              "misconception_name",
-              "severity",
-              "evidence_question_ids",
-              "detailed_rationale"
-            ],
-            "properties": {
-              "topic_id": {
-                "type": "string",
-                "description": "Taxonomy topic key matching the assessment questions."
-              },
-              "misconception_name": {
-                "type": "string",
-                "description": "Short diagnostic label (e.g. 'Sign reversal in quadratic vertex conversion')."
-              },
-              "severity": {
-                "type": "string",
-                "enum": ["critical", "moderate", "minor"],
-                "description": "Impact of this misconception on future learning progression."
-              },
-              "evidence_question_ids": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Questions where this misconception manifested."
-              },
-              "detailed_rationale": {
-                "type": "string",
-                "description": "Pedagogical explanation of why the learner arrived at this error."
-              }
-            }
-          }
+        "concept_name": {
+          "type": "string",
+          "description": "Human-readable label for the concept."
         },
-        "cognitive_strengths": {
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "moderate", "minor"],
+          "description": "Pedagogical severity of the learning deficit."
+        },
+        "description": {
+          "type": "string",
+          "description": "Diagnostic explanation of the learning gap."
+        },
+        "evidence_item_ids": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Demonstrated skills, solid mental models, and fluent competencies."
+          "description": "Question IDs demonstrating this gap."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Misconception": {
+      "type": "object",
+      "required": [
+        "concept_id",
+        "identified_misconception",
+        "explanation",
+        "detected_in_items"
+      ],
+      "properties": {
+        "concept_id": {
+          "type": "string",
+          "description": "Concept where the misconception manifested."
+        },
+        "identified_misconception": {
+          "type": "string",
+          "description": "Title or label of the specific cognitive fallacy."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Pedagogical explanation of why student committed this error."
+        },
+        "detected_in_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Items where this pattern was exhibited."
+        }
+      },
+      "additionalProperties": false
+    },
+    "RecommendedIntervention": {
+      "type": "object",
+      "required": [
+        "intervention_id",
+        "title",
+        "type",
+        "priority",
+        "actionable_steps"
+      ],
+      "properties": {
+        "intervention_id": {
+          "type": "string",
+          "description": "Unique identifier for this recommended intervention."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short heading for the learning intervention."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["remedial_lesson", "practice_drill", "conceptual_reframing", "scaffolded_walkthrough"],
+          "description": "Pedagogical format of the intervention."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Urgency of intervention."
+        },
+        "actionable_steps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Concrete steps the learner or instructor should execute."
+        }
+      },
+      "additionalProperties": false
+    },
+    "LLMDiagnosticResponse": {
+      "type": "object",
+      "description": "Expected structured output from AI diagnostic synthesis.",
+      "required": [
+        "assessment_id",
+        "student_id",
+        "domain",
+        "mastery_score",
+        "latent_ability_theta",
+        "learning_gaps",
+        "misconceptions",
+        "recommended_interventions",
+        "summary_narrative"
+      ],
+      "properties": {
+        "assessment_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "student_id": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "mastery_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Normalized overall domain mastery (0.0 = zero mastery, 1.0 = full mastery)."
+        },
+        "latent_ability_theta": {
+          "type": "number",
+          "description": "Item Response Theory (IRT) estimated latent ability parameter (-3.0 to +3.0)."
         },
         "learning_gaps": {
           "type": "array",
           "items": {
-            "type": "object",
-            "required": ["topic_id", "gap_description", "priority_rank"],
-            "properties": {
-              "topic_id": { "type": "string" },
-              "gap_description": { "type": "string" },
-              "priority_rank": { "type": "integer", "minimum": 1 }
-            }
+            "$ref": "#/definitions/LearningGap"
+          }
+        },
+        "misconceptions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Misconception"
           }
         },
         "recommended_interventions": {
           "type": "array",
           "items": {
-            "type": "object",
-            "required": [
-              "action_type",
-              "target_topic",
-              "description",
-              "estimated_time_minutes"
-            ],
-            "properties": {
-              "action_type": {
-                "type": "string",
-                "enum": ["micro_lesson", "targeted_practice", "concept_map_review", "worked_example_study"]
-              },
-              "target_topic": { "type": "string" },
-              "description": { "type": "string" },
-              "estimated_time_minutes": { "type": "integer", "minimum": 1 }
-            }
+            "$ref": "#/definitions/RecommendedIntervention"
           }
         },
-        "confidence_index": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 1.0,
-          "description": "LLM self-evaluation of diagnostic certainty based on sample richness."
+        "summary_narrative": {
+          "type": "string",
+          "description": "Synthesized qualitative diagnostic paragraph for student and educator."
         }
       },
-      "example": {
-        "diagnostic_summary": "Learner demonstrates robust command of polynomial factorization using difference of squares, but exhibits systematic sign errors during parabolic vertex transformations under time constraints.",
-        "proficiency_level": "emerging",
-        "identified_misconceptions": [
-          {
-            "topic_id": "algebra.quadratics.vertex_form",
-            "misconception_name": "Sign negation omission in vertex coordinates",
-            "severity": "critical",
-            "evidence_question_ids": ["q_math_algebra_002"],
-            "detailed_rationale": "Learner applied h=-b/(2a) correctly to obtain the x-coordinate, but neglected coordinate sign inversion when writing y = a(x-h)^2 + k, confusing axis symmetry."
-          }
-        ],
-        "cognitive_strengths": [
-          "Rapid algebraic recognition of difference of two squares",
-          "Accurate computation of standard polynomial roots"
-        ],
-        "learning_gaps": [
-          {
-            "topic_id": "algebra.quadratics.vertex_form",
-            "gap_description": "Translating standard quadratic form ax^2+bx+c into completed square / vertex coordinates.",
-            "priority_rank": 1
-          }
-        ],
-        "recommended_interventions": [
-          {
-            "action_type": "worked_example_study",
-            "target_topic": "algebra.quadratics.vertex_form",
-            "description": "Step-by-step contrast between vertex coordinate signs and parent parabola shifts.",
-            "estimated_time_minutes": 15
-          },
-          {
-            "action_type": "targeted_practice",
-            "target_topic": "algebra.quadratics.vertex_form",
-            "description": "5 targeted problems focusing on extracting (h, k) with alternating sign variations.",
-            "estimated_time_minutes": 10
-          }
-        ],
-        "confidence_index": 0.94
-      }
-    },
-
-    "assessment_submission_response": {
-      "endpoint": "Response from POST /api/assessments/submit/",
-      "description": "Composite API response delivered back to client containing combined mathematical/statistical score metrics and AI diagnostic results.",
+      "additionalProperties": false
+    }
+  },
+  "contracts": {
+    "assessment_submission_request": {
+      "endpoint": "POST /api/assessments/submit/",
       "type": "object",
-      "required": [
-        "submission_id",
-        "assessment_id",
-        "user_id",
-        "status",
-        "processed_at",
-        "math_metrics",
-        "ai_diagnostic"
-      ],
+      "required": ["assessment_id", "user_id", "subject_domain", "responses"],
       "properties": {
-        "submission_id": { "type": "string", "format": "uuid" },
         "assessment_id": { "type": "string", "format": "uuid" },
         "user_id": { "type": "string" },
-        "status": { "type": "string", "enum": ["completed", "processing", "failed"] },
-        "processed_at": { "type": "string", "format": "date-time" },
-        "math_metrics": {
-          "type": "object",
-          "required": [
-            "theta_score",
-            "standard_error",
-            "percentile_rank",
-            "raw_score",
-            "total_items",
-            "topic_mastery"
-          ],
-          "properties": {
-            "theta_score": { "type": "number", "description": "IRT Latent Ability (Theta) estimate." },
-            "standard_error": { "type": "number", "description": "IRT Standard Error of Measurement (SEM)." },
-            "percentile_rank": { "type": "number", "minimum": 0.0, "maximum": 100.0 },
-            "raw_score": { "type": "integer" },
-            "total_items": { "type": "integer" },
-            "topic_mastery": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "number",
-                "minimum": 0.0,
-                "maximum": 1.0,
-                "description": "Bayesian mastery probability (0.0 to 1.0)."
-              }
-            }
-          }
-        },
-        "ai_diagnostic": {
-          "$ref": "#/contracts/llm_diagnostic_output_payload"
-        }
+        "subject_domain": { "type": "string" },
+        "responses": { "type": "array" }
       }
+    },
+    "math_metrics": {
+      "type": "object",
+      "required": ["theta_score", "standard_error", "percentile_rank", "raw_score", "total_items", "topic_mastery"],
+      "properties": {
+        "theta_score": { "type": "number" },
+        "standard_error": { "type": "number" },
+        "percentile_rank": { "type": "number" },
+        "raw_score": { "type": "integer" },
+        "total_items": { "type": "integer" },
+        "topic_mastery": { "type": "object" }
+      }
+    },
+    "assessment_submission_response": {
+      "type": "object",
+      "required": ["submission_id", "assessment_id", "user_id", "status", "processed_at", "math_metrics", "ai_diagnostic"]
+    }
+  },
+  "examples": {
+    "sample_post_assessments_submit": {
+      "assessment_id": "a9d7240c-99fb-4a87-b6bb-f8876c6e7a20",
+      "student_id": "std_89234",
+      "domain": "algebraic_equations",
+      "timestamp": "2026-09-25T07:10:00Z",
+      "responses": [
+        {
+          "item_id": "item_alg_001",
+          "user_answer": "x = 4",
+          "is_correct": true,
+          "time_spent_seconds": 32.5,
+          "hints_used": 0,
+          "confidence_level": "high"
+        },
+        {
+          "item_id": "item_alg_002",
+          "user_answer": "x = -2",
+          "is_correct": false,
+          "time_spent_seconds": 88.0,
+          "hints_used": 1,
+          "confidence_level": "low"
+        }
+      ],
+      "metadata": {
+        "grade_level": "Grade 9",
+        "curriculum_standard": "CCSS.MATH.CONTENT.HSA.REI.B.3",
+        "client_version": "v1.2.0"
+      }
+    },
+    "sample_llm_diagnostic_response": {
+      "assessment_id": "a9d7240c-99fb-4a87-b6bb-f8876c6e7a20",
+      "student_id": "std_89234",
+      "domain": "algebraic_equations",
+      "mastery_score": 0.65,
+      "latent_ability_theta": 0.42,
+      "learning_gaps": [
+        {
+          "concept_id": "neg_sign_distrib",
+          "concept_name": "Negative Sign Distribution in Multi-Step Equations",
+          "severity": "critical",
+          "description": "Learner fails to distribute negative signs across parentheses prior to isolating variables.",
+          "evidence_item_ids": ["item_alg_002"]
+        }
+      ],
+      "misconceptions": [
+        {
+          "concept_id": "neg_sign_distrib",
+          "identified_misconception": "Selective Sign Flipping",
+          "explanation": "Student flipped the sign of the first term inside parentheses but left the second term unaltered.",
+          "detected_in_items": ["item_alg_002"]
+        }
+      ],
+      "recommended_interventions": [
+        {
+          "intervention_id": "intv_01_distrib_prop",
+          "title": "Interactive Distributive Property Visualizer",
+          "type": "conceptual_reframing",
+          "priority": "high",
+          "actionable_steps": [
+            "Review visual area models representing -(a + b)",
+            "Complete 5 targeted 1-step sign distribution practice drills",
+            "Retest with multi-step parenthetical equations"
+          ]
+        }
+      ],
+      "summary_narrative": "The learner demonstrates solid baseline competence in standard linear solving operations, but displays a critical cognitive misconception during sign distribution when parentheses are preceded by a subtraction operator."
     }
   }
 }

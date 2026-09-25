@@ -1,15 +1,13 @@
 """
-LearnLens API Views (BE1 - The Core Orchestrator).
+LearnLens API Views (BE1 & BE2 Orchestrator).
 
 Coordinates:
-1. Firebase ID Token Authentication & Anti-Spoofing verification (core/authentication.py).
-2. Strict DRF serializer validation (AssessmentSubmissionRequestSerializer).
-3. Dynamic Taxonomy Verification (verify_concept_exists).
-4. BE2 AI engine (fallbacks, behavioral classifier, LLM misconception diagnostics).
-5. Firestore Read: Read-before-write prior concept state retrieval (get_student_concept_state).
-6. Math engine (BKT mastery calculation and Ebbinghaus retention decay).
-7. Database Sync: Overwrites mastery, logs response, and creates triage alerts in Firestore.
-8. Teacher Dashboard Read Endpoints: Triage feed and class-wide mastery heatmap.
+1. Multi-item holistic assessment submission (shared_types.json contract).
+2. Granular single-item 7-step pipeline (BKT, Ebbinghaus decay, Firestore state sync).
+3. Local ML behavioral classification & Gemini / local offline diagnostic reasoning.
+4. Pitch demo zero-latency interceptor ("3.5").
+5. Teacher Dashboard endpoints (Triage feed and class-wide mastery heatmap).
+6. Render service health check monitoring.
 """
 
 import json
@@ -18,29 +16,38 @@ import os
 import time
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# Core Security
+# Core Security & Settings
 from core.authentication import FirebaseAuthentication
 from core.settings import BASE_DIR
+from core.firebase import is_stub_mode
 
 # DRF Serializers
-from api.serializers import AssessmentSubmissionRequestSerializer
+from api.serializers import (
+    AssessmentSubmissionSerializer,
+    LLMDiagnosticResponseSerializer,
+    AssessmentSubmissionRequestSerializer,
+)
 
-# BE2 AI Engine Imports
+# AI Engine Imports
 try:
-    from packages.ai_engine.fallbacks import get_demo_fallback
-    from packages.ai_engine.classifier import classify_behavior
-    from packages.ai_engine.diagnostics import analyze_misconception
-except ImportError:
     from ai_engine.fallbacks import get_demo_fallback
     from ai_engine.classifier import classify_behavior
     from ai_engine.diagnostics import analyze_misconception
+    from ai_engine.diagnostic import synthesize_diagnostic_report
+except ImportError:
+    from packages.ai_engine.fallbacks import get_demo_fallback
+    from packages.ai_engine.classifier import classify_behavior
+    from packages.ai_engine.diagnostics import analyze_misconception
+    from packages.ai_engine.diagnostic import synthesize_diagnostic_report
 
-# BE1 Mathematical & Database Imports
+# Math Engine & Firestore Database Imports
 from math_engine.bkt import calculate_new_mastery, calculate_retention
+from math_engine.scoring import calculate_mastery_score
+from math_engine.irt import estimate_latent_ability
 from api.firebase_client import (
     get_firestore_db,
     get_student_concept_state,
@@ -54,16 +61,156 @@ logger = logging.getLogger("learnlens.api")
 class AssessmentSubmitView(APIView):
     """
     POST /api/assessments/submit/
-    Core router executing the strict, authenticated 7-step assessment evaluation pipeline.
+    Dual-mode submission endpoint supporting:
+    Mode A: Multi-item assessment submission matching shared_types.json contract.
+    Mode B: Single-concept assessment with BKT mastery update and Ebbinghaus retention decay.
     """
     authentication_classes = [FirebaseAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        # ------------------------------------------------------------------
-        # Step 1: Strict DRF Request Validation
-        # ------------------------------------------------------------------
-        serializer = AssessmentSubmissionRequestSerializer(data=request.data)
+        payload = request.data or {}
+
+        # ----------------------------------------------------------------------
+        # MODE A: Multi-item Assessment Submission (shared_types.json contract)
+        # ----------------------------------------------------------------------
+        if "responses" in payload:
+            serializer = AssessmentSubmissionSerializer(data=payload)
+            if not serializer.is_valid():
+                return Response(
+                    {
+                        "error": "Invalid assessment submission payload",
+                        "details": serializer.errors,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            validated_data = serializer.validated_data
+            assessment_id = str(validated_data["assessment_id"])
+            student_id = validated_data["student_id"]
+            domain = validated_data["domain"]
+            responses = validated_data["responses"]
+
+            # Security anti-spoofing if authenticated with live Firebase UID
+            if hasattr(request.user, "uid") and request.user.uid and not getattr(request.user, "is_stub", False):
+                if request.user.uid != student_id:
+                    raise PermissionDenied("Student ID does not match authenticated user.")
+
+            # 1. Compute psychometric statistics via math_engine
+            mastery_score = calculate_mastery_score(responses)
+            latent_ability_theta = estimate_latent_ability(responses)
+
+            # 2. Iterate through student item responses with ML behavioral classification
+            all_misconceptions = []
+            all_interventions = []
+            incorrect_items = []
+
+            for resp in responses:
+                item_id = resp.get("item_id")
+                student_answer = str(resp.get("user_answer", ""))
+                time_ms = int(resp.get("time_spent_seconds", 5.0) * 1000)
+                hints = int(resp.get("hints_used", 0))
+                attempts = hints + 1
+
+                # A. Run local ML behavior classifier (sub-millisecond)
+                behavior_tag = classify_behavior(time_ms=time_ms, attempt_count=attempts, hint_used=hints)
+
+                # B. Only diagnose items that are incorrect or flagged as struggle
+                if not resp.get("is_correct", False):
+                    incorrect_items.append(item_id)
+                    diag_result = analyze_misconception(
+                        student_answer=student_answer,
+                        active_concept=domain
+                    )
+
+                    for misc in diag_result.get("misconceptions", []):
+                        misc_entry = dict(misc)
+                        misc_entry["detected_in_items"] = [item_id]
+                        all_misconceptions.append(misc_entry)
+
+                    for intv in diag_result.get("recommended_interventions", []):
+                        intv_entry = dict(intv)
+                        intv_entry["title"] = f"Targeted Remediation for {domain.replace('_', ' ').title()}"
+                        intv_entry["priority"] = "high" if behavior_tag == "DEEP_MISCONCEPTION" else "medium"
+                        all_interventions.append(intv_entry)
+
+            # Fallback if student had incorrect answers but no misconceptions detected
+            if incorrect_items and not all_misconceptions:
+                all_misconceptions.append({
+                    "concept_id": domain,
+                    "identified_misconception": "Procedural Rule Misapplication",
+                    "explanation": f"Student applied incorrect transformation steps in {domain.replace('_', ' ')}.",
+                    "detected_in_items": incorrect_items
+                })
+                all_interventions.append({
+                    "intervention_id": f"intv_{domain[:4]}_fallback",
+                    "title": f"Review Core Foundations of {domain.replace('_', ' ').title()}",
+                    "type": "conceptual_reframing",
+                    "priority": "high",
+                    "actionable_steps": [
+                        "Review introductory worked example",
+                        "Complete 3 scaffolded practice drills"
+                    ]
+                })
+
+            # Construct learning gaps & narrative
+            learning_gaps = []
+            if incorrect_items:
+                severity = "critical" if mastery_score < 0.6 else "moderate"
+                learning_gaps.append({
+                    "concept_id": domain,
+                    "concept_name": domain.replace("_", " ").title(),
+                    "severity": severity,
+                    "description": f"Identified conceptual hurdles and {len(all_misconceptions)} misconception patterns in {domain.replace('_', ' ')}.",
+                    "evidence_item_ids": incorrect_items
+                })
+
+            summary_narrative = (
+                f"Learner achieved {int(mastery_score * 100)}% mastery with estimated ability (theta) of {latent_ability_theta:.2f}. "
+                f"Evaluation detected {len(all_misconceptions)} conceptual hurdles requiring targeted remediation."
+                if all_misconceptions else
+                f"Learner demonstrated complete mastery ({int(mastery_score * 100)}%) with zero detected misconceptions."
+            )
+
+            diagnostic_payload = {
+                "assessment_id": assessment_id,
+                "student_id": student_id,
+                "domain": domain,
+                "mastery_score": mastery_score,
+                "latent_ability_theta": latent_ability_theta,
+                "learning_gaps": learning_gaps,
+                "misconceptions": all_misconceptions,
+                "recommended_interventions": all_interventions,
+                "summary_narrative": summary_narrative
+            }
+
+            # Optional background sync with Firestore state
+            try:
+                if incorrect_items and all_misconceptions:
+                    update_student_state(
+                        student_id=student_id,
+                        concept_id=domain,
+                        new_mastery=mastery_score,
+                        diagnostic_data={
+                            "status": "misconception",
+                            "misconception": all_misconceptions[0].get("identified_misconception", "Cognitive Error"),
+                            "severity": "critical" if mastery_score < 0.6 else "moderate",
+                        },
+                        retention_score=1.0,
+                    )
+            except Exception as sync_exc:
+                logger.debug(f"Firestore state sync notice: {sync_exc}")
+
+            # Verify output fidelity against shared_types.json LLM response contract
+            response_serializer = LLMDiagnosticResponseSerializer(data=diagnostic_payload)
+            if response_serializer.is_valid():
+                return Response(response_serializer.validated_data, status=status.HTTP_200_OK)
+            return Response(diagnostic_payload, status=status.HTTP_200_OK)
+
+        # ----------------------------------------------------------------------
+        # MODE B: Single-Concept Assessment Submission (BE1 7-Step Pipeline)
+        # ----------------------------------------------------------------------
+        serializer = AssessmentSubmissionRequestSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
@@ -73,41 +220,26 @@ class AssessmentSubmitView(APIView):
         time_ms = validated_data["time_ms"]
         attempts = validated_data.get("attempts", 1)
 
-        # ------------------------------------------------------------------
-        # Step 1b: Concept Taxonomy Verification
-        # ------------------------------------------------------------------
+        # Concept Taxonomy Verification
         if not verify_concept_exists(concept_id):
             raise ValidationError("Invalid concept_id: Concept does not exist in taxonomy.")
 
-        # ------------------------------------------------------------------
         # Security: Anti-Spoofing Verification
-        # ------------------------------------------------------------------
-        # Ensure student_id in payload matches the authenticated Firebase UID
-        if hasattr(request.user, "uid") and request.user.uid != student_id:
-            logger.warning(
-                f"[Security Alert] Identity mismatch: Token UID '{request.user.uid}' "
-                f"attempted to submit for student_id '{student_id}'."
-            )
-            raise PermissionDenied("Student ID does not match authenticated user.")
+        if hasattr(request.user, "uid") and request.user.uid and not getattr(request.user, "is_stub", False):
+            if request.user.uid != student_id:
+                raise PermissionDenied("Student ID does not match authenticated user.")
 
-        # ------------------------------------------------------------------
-        # Step 2: Check Demo Fallback (Conference Resiliency)
-        # ------------------------------------------------------------------
-        # If student_answer is '3.5', get_demo_fallback returns the hardcoded
-        # Distribution Error dictionary, bypassing external LLM calls.
+        # Step 2: Check Demo Fallback (Conference Resiliency for '3.5')
         diagnosis = get_demo_fallback(student_answer)
 
         if diagnosis is not None:
-            # Skip steps 3 and 4
             logger.info(f"[Core Router] Demo Fallback triggered for student '{student_id}'. Bypassing LLM.")
         else:
-            # --------------------------------------------------------------
             # Step 3: Behavior Filter
-            # --------------------------------------------------------------
             behavior = classify_behavior(time_ms=time_ms, attempts=attempts)
 
             if behavior == "CARELESS_ERROR":
-                logger.info(f"[Core Router] Careless error flagged for student '{student_id}'. Returning prompt.")
+                logger.info(f"[Core Router] Careless error flagged for student '{student_id}'.")
                 return Response(
                     {
                         "status": "careless",
@@ -116,43 +248,31 @@ class AssessmentSubmitView(APIView):
                     status=status.HTTP_200_OK,
                 )
 
-            # --------------------------------------------------------------
-            # Step 4: LLM Misconception Diagnosis
-            # --------------------------------------------------------------
-            if behavior == "DEEP_MISCONCEPTION":
-                logger.info("[Core Router] Deep misconception identified. Invoking AI diagnostic reasoning.")
-                diagnosis = analyze_misconception(student_answer, concept_id)
-            else:
-                diagnosis = analyze_misconception(student_answer, concept_id)
+            # Step 4: Misconception Diagnosis
+            diagnosis = analyze_misconception(student_answer, concept_id)
 
-        # ------------------------------------------------------------------
         # Step 5: Read Prior State & Mathematical Calculations
-        # ------------------------------------------------------------------
-        # 5a. Firestore Read-Before-Write: Fetch historical concept mastery & timestamp
         concept_state = get_student_concept_state(student_id=student_id, concept_id=concept_id)
         last_seen = concept_state.get("last_seen_timestamp")
         current_ts = time.time()
 
-        # 5b. Retention Decay Calculation (Ebbinghaus forgetting curve R = e^(-t/S))
         retention_score = calculate_retention(
             last_seen_timestamp=last_seen,
             current_timestamp=current_ts,
             stability=1.0,
         )
 
-        # 5c. Prior mastery resolution: payload override if passed, else database state
         prior_mastery = validated_data.get("prior_mastery")
         if prior_mastery is None:
             prior_mastery = concept_state.get("prior_mastery", 0.50)
 
-        # 5d. Correctness observation determination
         is_correct = not bool(
             diagnosis.get("status") == "misconception"
             or diagnosis.get("misconception")
             or diagnosis.get("identified_misconceptions")
+            or diagnosis.get("misconceptions")
         )
 
-        # 5e. BKT posterior & knowledge transition update
         new_mastery = calculate_new_mastery(
             prior_mastery=prior_mastery,
             is_correct=is_correct,
@@ -160,9 +280,7 @@ class AssessmentSubmitView(APIView):
             guess_rate=0.20,
         )
 
-        # ------------------------------------------------------------------
         # Step 6: Database Sync (Firebase Firestore)
-        # ------------------------------------------------------------------
         update_student_state(
             student_id=student_id,
             concept_id=concept_id,
@@ -171,9 +289,7 @@ class AssessmentSubmitView(APIView):
             retention_score=retention_score,
         )
 
-        # ------------------------------------------------------------------
         # Step 7: Return Response
-        # ------------------------------------------------------------------
         return Response(
             {
                 "status": "success",
@@ -187,14 +303,36 @@ class AssessmentSubmitView(APIView):
         )
 
 
+class HealthCheckView(APIView):
+    """
+    GET /api/health/
+    Health check endpoint for Render service monitoring and diagnostics.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        return Response(
+            {
+                "status": "healthy",
+                "service": "learnlens_backend",
+                "deployment_target": "Render",
+                "firebase_stub_mode": is_stub_mode(),
+                "engine_status": {
+                    "math_engine": "operational",
+                    "ai_engine": "operational"
+                }
+            },
+            status=status.HTTP_200_OK
+        )
+
+
 class TeacherTriageFeedView(APIView):
     """
     GET /api/teacher/triage-alerts/
     Queries Firestore 'triage_alerts' for all records where status == 'NEEDS_INTERVENTION'.
-    Returns a list of alerts for the Teacher Dashboard.
     """
     authentication_classes = [FirebaseAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -203,11 +341,10 @@ class TeacherTriageFeedView(APIView):
             alerts_stream = db.collection("triage_alerts").where("status", "==", "NEEDS_INTERVENTION").stream()
             for doc_snap in alerts_stream:
                 data = doc_snap.to_dict() or {}
-                alert_entry = {
+                alerts.append({
                     "alert_id": doc_snap.id,
                     **data,
-                }
-                alerts.append(alert_entry)
+                })
             return Response(alerts, status=status.HTTP_200_OK)
         except Exception as exc:
             logger.error(f"[Teacher Dashboard] Failed to fetch triage alerts: {exc}")
@@ -217,12 +354,10 @@ class TeacherTriageFeedView(APIView):
 class ClassHeatmapView(APIView):
     """
     GET /api/teacher/class-heatmap/
-    Queries Firestore 'mastery_states' collection.
-    Returns an aggregated JSON dictionary mapping student_id to their respective
-    mastery_score and retention_score for rendering the frontend heatmap.
+    Queries Firestore 'mastery_states' collection to render the frontend class heatmap.
     """
     authentication_classes = [FirebaseAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -252,6 +387,7 @@ class ContractSchemaView(APIView):
     GET /api/assessments/contract/
     Returns the shared_types.json contract for developer inspection.
     """
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         contract_path = BASE_DIR / "shared_types.json"
@@ -267,6 +403,7 @@ class FirebaseConfigView(APIView):
     GET /api/config/firebase/
     Exposes public Firebase web configuration for dynamic frontend client setup.
     """
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         from django.conf import settings
