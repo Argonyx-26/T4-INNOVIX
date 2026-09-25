@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Course } from "../types";
-import { MOCK_COURSES } from "../data/mockCourses";
+import { dataService } from "../services/dataService";
 import { CourseCard } from "../components/CourseCard";
 import { useThemeMode } from "../context/ThemeModeContext";
-import { Search, Filter, Bookmark, Sparkles, BookOpen, Layers, CheckCircle2 } from "lucide-react";
+import { Search, Filter, Bookmark, Sparkles, BookOpen, Layers, CheckCircle2, Loader2 } from "lucide-react";
 
 interface CourseGridProps {
   onSelectCourse: (course: Course) => void;
@@ -13,11 +13,20 @@ type FilterCategory = "All" | "School (K-12)" | "Undergraduate (UG)" | "Postgrad
 
 export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
   const { bookmarks, mode } = useThemeMode();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [activeTier, setActiveTier] = useState<string>("All");
   const [activeDiscipline, setActiveDiscipline] = useState<string>("All");
   const [activeFilter, setActiveFilter] = useState<FilterCategory>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [riskFilter, setRiskFilter] = useState<string>("All");
+
+  useEffect(() => {
+    dataService.getCourses().then((data) => {
+      setCourses(data);
+      setLoading(false);
+    });
+  }, []);
 
   const filterOptions: FilterCategory[] = [
     "All",
@@ -30,7 +39,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
   ];
 
   const filteredCourses = useMemo(() => {
-    return MOCK_COURSES.filter((course) => {
+    return courses.filter((course) => {
       // Tier Filter
       if (activeTier !== "All" && course.tier !== activeTier) return false;
 
@@ -203,7 +212,12 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
       </div>
 
       {/* Grid of Courses */}
-      {filteredCourses.length > 0 ? (
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-8 h-8 text-[#8266F0] animate-spin" />
+          <p className="text-xs text-neutral-500 font-medium">Synchronizing curriculum from Firestore...</p>
+        </div>
+      ) : filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {filteredCourses.map((course) => (
             <CourseCard

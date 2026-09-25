@@ -8,19 +8,33 @@ import {
 import { useThemeMode } from "../context/ThemeModeContext";
 import { ADHDDiagnosticView } from "./ADHDDiagnosticView";
 import { DyslexicDiagnosticView } from "./DyslexicDiagnosticView";
-import { DiagnosticOption, ConceptChallenge } from "../types";
-import { UNIVERSAL_CHALLENGES } from "../data/mockUniversalChallenges";
-import { MOCK_EDUCATIONAL_RESOURCES } from "../data/mockResources";
+import { DiagnosticOption, ConceptChallenge, EducationalResource } from "../types";
+import { dataService } from "../services/dataService";
 import { InteractiveMindMap } from "../components/InteractiveMindMap";
 import { MisconceptionLogModal } from "../components/MisconceptionLogModal";
+import { useAuth } from "../context/AuthContext";
 
 export const LearnLensDiagnostic: React.FC = () => {
   const { mode, speak } = useThemeMode();
+  const { user } = useAuth();
+
+  const [challenges, setChallenges] = useState<ConceptChallenge[]>([]);
+  const [resources, setResources] = useState<EducationalResource[]>([]);
+  const [loadingData, setLoadingData] = useState<boolean>(true);
 
   // Active Multi-Tier Challenge
   const [selectedChallengeId, setSelectedChallengeId] = useState<string>("math-school-linear");
+
+  useEffect(() => {
+    Promise.all([dataService.getChallenges(), dataService.getResources()]).then(([chs, res]) => {
+      setChallenges(chs);
+      setResources(res);
+      setLoadingData(false);
+    });
+  }, []);
+
   const activeChallenge: ConceptChallenge = 
-    UNIVERSAL_CHALLENGES.find((c) => c.id === selectedChallengeId) || UNIVERSAL_CHALLENGES[0];
+    challenges.find((c) => c.id === selectedChallengeId) || challenges[0] || ({} as ConceptChallenge);
 
   const [currentStage, setCurrentStage] = useState<number>(0);
   const [selectedOption, setSelectedOption] = useState<DiagnosticOption | null>(null);
@@ -71,10 +85,11 @@ export const LearnLensDiagnostic: React.FC = () => {
     const finalTimeMs = Date.now() - timerRef.current;
     const cleanAnswer = opt.label.replace(/^x\s*=\s*/i, "").trim();
 
-    // CRITICAL AUTH FIX: Strict anti-spoofing matching Django backend requirements
-    const mockToken = "mock-student_demo_01";
+    // Strict anti-spoofing matching Django backend requirements
+    const studentId = user?.uid || "student_demo_01";
+    const mockToken = `mock-${studentId}`;
     const payload = {
-      student_id: "student_demo_01",
+      student_id: studentId,
       concept_id: activeChallenge.discipline === "Computer Science" ? "binary_search" : "algebra",
       student_answer: cleanAnswer,
       time_ms: finalTimeMs,
@@ -147,7 +162,7 @@ export const LearnLensDiagnostic: React.FC = () => {
   const formattedSeconds = (elapsedMs / 1000).toFixed(1);
 
   // Filter matched resources for active challenge
-  const matchedResources = MOCK_EDUCATIONAL_RESOURCES.filter(
+  const matchedResources = resources.filter(
     (res) => res.discipline === activeChallenge.discipline
   ).slice(0, 3);
 
@@ -204,7 +219,7 @@ export const LearnLensDiagnostic: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto scrollbar-none pb-1">
-          {UNIVERSAL_CHALLENGES.map((ch) => {
+          {challenges.map((ch) => {
             const isSelected = ch.id === selectedChallengeId;
             return (
               <button
@@ -635,6 +650,13 @@ export const LearnLensDiagnostic: React.FC = () => {
               <RotateCcw className="w-4 h-4" />
               <span>Retest New Equation</span>
             </button>
+
+            <a
+              href="#diagnostic-results"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-sm bg-[#141414] dark:bg-white text-white dark:text-[#141414] hover:opacity-90 transition text-center shadow-sm"
+            >
+              View Diagnostic Report →
+            </a>
 
             <a
               href="#courses"

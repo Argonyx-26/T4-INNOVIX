@@ -3,12 +3,13 @@ import {
   Users, AlertTriangle, TrendingDown, Sparkles, Filter, CheckCircle2, 
   BarChart3, RefreshCw, Send, Download, BookOpen, Clock, ShieldAlert, 
   UserX, ArrowRight, Radio, Activity, MessageSquare, Database, Search,
-  GitCompare, UserCheck, Layers, ChevronRight, HelpCircle, FileText
+  GitCompare, UserCheck, Layers, ChevronRight, HelpCircle, FileText,
+  LayoutDashboard, TrendingUp, Target
 } from "lucide-react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useThemeMode } from "../context/ThemeModeContext";
-import { MOCK_STUDENT_PROFILES, MOCK_REMEDIAL_PODS } from "../data/mockStudentTelemetry";
+import { dataService } from "../services/dataService";
 import { StudentTelemetryProfile, RemedialPod } from "../types";
 
 export interface TriageAlertDoc {
@@ -29,10 +30,34 @@ export interface TriageAlertDoc {
   created_at?: string;
 }
 
-export const TeacherInsightsView: React.FC = () => {
+export type TeacherSubTab = "overview" | "kanban" | "comparison" | "pods" | "rag-chatbot" | "analytics";
+
+interface TeacherInsightsViewProps {
+  initialTab?: TeacherSubTab;
+}
+
+export const TeacherInsightsView: React.FC<TeacherInsightsViewProps> = ({ initialTab = "overview" }) => {
   const { addToast } = useThemeMode();
   const [selectedClass, setSelectedClass] = useState<string>("All Classes");
-  const [activeTab, setActiveTab] = useState<"kanban" | "rag-chatbot" | "comparison" | "pods" | "heatmap">("rag-chatbot");
+  const [activeTab, setActiveTab] = useState<TeacherSubTab>(initialTab);
+  const [studentProfiles, setStudentProfiles] = useState<StudentTelemetryProfile[]>([]);
+  const [remedialPods, setRemedialPods] = useState<RemedialPod[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      dataService.getStudentTelemetryProfiles(),
+      dataService.getRemedialPods()
+    ]).then(([profiles, pods]) => {
+      setStudentProfiles(profiles);
+      setRemedialPods(pods);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Live Firestore Triage Alerts State
   const [alerts, setAlerts] = useState<TriageAlertDoc[]>([]);
@@ -230,17 +255,22 @@ export const TeacherInsightsView: React.FC = () => {
       {/* Navigation Sub-Tabs Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
         {[
-          { id: "rag-chatbot", label: "Teacher RAG Chatbot", icon: MessageSquare, badge: "Vector DB" },
-          { id: "comparison", label: "Student Comparison Matrix", icon: GitCompare, badge: "Multi-Param" },
-          { id: "pods", label: "Remedial Breakout Pods", icon: Users, badge: "Auto-Cluster" },
-          { id: "kanban", label: "Real-Time Triage Kanban", icon: Activity, badge: `${alerts.length} Live` },
+          { id: "overview", label: "Overview", icon: LayoutDashboard, hash: "#teacher" },
+          { id: "kanban", label: "Live Triage", icon: Activity, badge: `${alerts.length} Live`, hash: "#teacher-triage" },
+          { id: "comparison", label: "Student Comparison", icon: GitCompare, badge: "Multi-Param", hash: "#teacher-students" },
+          { id: "analytics", label: "Cohort Analytics", icon: BarChart3, hash: "#teacher-analytics" },
+          { id: "pods", label: "Interventions & Pods", icon: Users, badge: "Auto-Cluster", hash: "#teacher-interventions" },
+          { id: "rag-chatbot", label: "RAG Intelligence", icon: MessageSquare, badge: "Vector DB", hash: "#teacher-intelligence" },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                setActiveTab(tab.id as TeacherSubTab);
+                window.location.hash = tab.hash;
+              }}
               className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold whitespace-nowrap transition flex items-center space-x-2 ${
                 isActive
                   ? "bg-[#8266F0] text-white shadow-md shadow-[#8266F0]/25"
@@ -260,6 +290,230 @@ export const TeacherInsightsView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* TAB 0: OVERVIEW / DASHBOARD (Section 26) */}
+      {activeTab === "overview" && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          {/* Top Cohort Telemetry Metric Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm space-y-1">
+              <span className="text-xs font-semibold text-neutral-500">Tracked Students</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white font-display">142</div>
+              <span className="text-[11px] text-emerald-600 font-bold">96% Active Today</span>
+            </div>
+
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm space-y-1">
+              <span className="text-xs font-semibold text-neutral-500">Live Cognitive Flags</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 font-display">{alerts.length}</div>
+              <span className="text-[11px] text-rose-500 font-bold">Needs Micro-Intervention</span>
+            </div>
+
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm space-y-1">
+              <span className="text-xs font-semibold text-neutral-500">Cohort Velocity</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#8266F0] font-display">38s</div>
+              <span className="text-[11px] text-emerald-600 font-bold">-18s faster vs legacy</span>
+            </div>
+
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 shadow-sm space-y-1">
+              <span className="text-xs font-semibold text-neutral-500">Concept Stability</span>
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-display">87%</div>
+              <span className="text-[11px] text-emerald-600 font-bold">+9% Retention</span>
+            </div>
+          </div>
+
+          {/* Quick Jump Grid into Triage, Pods, and RAG */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Live Triage Summary Card */}
+            <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-rose-500" />
+                  <h3 className="text-base font-bold font-display text-neutral-900 dark:text-white">
+                    Live Triage Flags ({alerts.length})
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveTab("kanban");
+                    window.location.hash = "#teacher-triage";
+                  }}
+                  className="text-xs font-bold text-[#8266F0] hover:underline"
+                >
+                  View Kanban →
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {alerts.slice(0, 3).map((a) => (
+                  <div key={a.id} className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/15 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                        {a.studentName || "Student"}
+                      </div>
+                      <div className="text-[11px] text-rose-600 dark:text-rose-400 truncate">
+                        {a.title || "Misconception Loop Detected"}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSendToStudents(a.student_id)}
+                      className="shrink-0 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition"
+                    >
+                      Dispatch
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Active Remedial Pods Card */}
+            <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-4 h-4 text-[#8266F0]" />
+                  <h3 className="text-base font-bold font-display text-neutral-900 dark:text-white">
+                    Remedial Pods (3 Active)
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveTab("pods");
+                    window.location.hash = "#teacher-interventions";
+                  }}
+                  className="text-xs font-bold text-[#8266F0] hover:underline"
+                >
+                  Manage Pods →
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {remedialPods.slice(0, 2).map((pod) => (
+                  <div key={pod.id} className="p-3 rounded-2xl bg-[#8266F0]/5 border border-[#8266F0]/15 space-y-1">
+                    <div className="flex items-center justify-between text-xs font-bold text-neutral-900 dark:text-white">
+                      <span>{pod.podName}</span>
+                      <span className="text-[10px] text-[#8266F0]">{pod.studentIds.length} Students</span>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 line-clamp-1">{pod.sharedMisconception}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick RAG Assistant Launcher */}
+            <div className="rounded-3xl bg-gradient-to-br from-[#8266F0]/15 to-[#EC4899]/15 border border-[#8266F0]/25 p-6 shadow-sm space-y-4 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-1.5 text-xs font-bold text-[#8266F0] uppercase">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Pinecone Vector RAG</span>
+                </div>
+                <h3 className="text-base font-bold font-display text-neutral-900 dark:text-white">
+                  Ask Natural Language Queries
+                </h3>
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
+                  Search across student profiles, homework submissions, and error logs instantly with cosine vector similarity.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setActiveTab("rag-chatbot");
+                  window.location.hash = "#teacher-intelligence";
+                }}
+                className="w-full py-2.5 rounded-xl bg-[#141414] dark:bg-white text-white dark:text-[#141414] font-bold text-xs shadow transition flex items-center justify-center space-x-2"
+              >
+                <span>Launch RAG Chatbot</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: COHORT ANALYTICS (Section 25 & 26) */}
+      {activeTab === "analytics" && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 sm:p-8 shadow-sm space-y-6">
+            <div>
+              <h2 className="text-xl font-bold font-display text-neutral-900 dark:text-white">
+                Cohort Misconception Frequency Distribution
+              </h2>
+              <p className="text-xs text-neutral-500">
+                Aggregated error patterns across {selectedClass} diagnostic logs.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                { label: "Negative Factor Distribution / Sign Inversion", pct: 38, count: "54 students", color: "bg-rose-500" },
+                { label: "Binary Search Boundary Loop Invariant (high = mid)", pct: 29, count: "41 students", color: "bg-amber-500" },
+                { label: "Pointer Aliasing & Nullability Dereferencing", pct: 18, count: "25 students", color: "bg-sky-500" },
+                { label: "Accounts Receivable Cash Flow Inversion", pct: 15, count: "22 students", color: "bg-emerald-500" },
+              ].map((item, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                    <span>{item.label}</span>
+                    <span className="font-mono text-neutral-500">{item.pct}% ({item.count})</span>
+                  </div>
+                  <div className="w-full h-2.5 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
+                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-3">
+              <h3 className="text-base font-bold font-display text-neutral-900 dark:text-white">
+                Hint Reliance Distribution
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Breakdown of students requiring Tier 1 (Nudge), Tier 2 (Scaffold), or Tier 3 (Structural Guidance).
+              </p>
+              <div className="grid grid-cols-3 gap-2 pt-2 text-center">
+                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="text-lg font-bold text-emerald-600">62%</div>
+                  <div className="text-[10px] font-semibold text-neutral-500">Independent (Low)</div>
+                </div>
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                  <div className="text-lg font-bold text-amber-600">26%</div>
+                  <div className="text-[10px] font-semibold text-neutral-500">Moderate Reliance</div>
+                </div>
+                <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                  <div className="text-lg font-bold text-rose-600">12%</div>
+                  <div className="text-[10px] font-semibold text-neutral-500">High Reliance</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-3">
+              <h3 className="text-base font-bold font-display text-neutral-900 dark:text-white">
+                Cognitive Velocity by Academic Discipline
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Average seconds spent per concept diagnostic challenge.
+              </p>
+              <div className="space-y-2 pt-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">Computer Science</span>
+                  <span className="font-mono font-bold text-[#8266F0]">42s avg</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">Commerce & Finance</span>
+                  <span className="font-mono font-bold text-emerald-600">36s avg</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">Medicine & Physiology</span>
+                  <span className="font-mono font-bold text-sky-600">48s avg</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">Mathematics</span>
+                  <span className="font-mono font-bold text-amber-600">55s avg</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: TEACHER RAG CHATBOT (Section 8.1) */}
       {activeTab === "rag-chatbot" && (
@@ -415,7 +669,7 @@ export const TeacherInsightsView: React.FC = () => {
 
           {/* Student Selector Chips */}
           <div className="flex flex-wrap gap-2">
-            {MOCK_STUDENT_PROFILES.map((st) => {
+            {studentProfiles.map((st) => {
               const isSelected = selectedStudentIds.includes(st.id);
               return (
                 <button
@@ -441,7 +695,8 @@ export const TeacherInsightsView: React.FC = () => {
                 <tr>
                   <th className="p-4">Diagnostic Dimension</th>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    if (!st) return null;
                     return (
                       <th key={id} className="p-4 text-neutral-900 dark:text-white font-bold text-xs">
                         <div className="flex items-center space-x-2">
@@ -457,18 +712,18 @@ export const TeacherInsightsView: React.FC = () => {
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Cohort / Level</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 font-mono">{st.cohort}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 font-mono">{st?.cohort || "Cohort"}</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Overall Mastery Score</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
+                    const st = studentProfiles.find((s) => s.id === id);
                     return (
                       <td key={id} className="p-4 font-bold font-mono text-emerald-600 text-sm">
-                        {Math.round(st.masteryScore * 100)}%
+                        {st ? Math.round(st.masteryScore * 100) : 75}%
                       </td>
                     );
                   })}
@@ -477,7 +732,8 @@ export const TeacherInsightsView: React.FC = () => {
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Hint Reliance Index</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    if (!st) return <td key={id} className="p-4 font-mono">0.3</td>;
                     return (
                       <td key={id} className="p-4 font-mono">
                         {st.hintRelianceIndex < 0.3 ? (
@@ -495,32 +751,32 @@ export const TeacherInsightsView: React.FC = () => {
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Average Velocity</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 font-mono">{st.averageVelocitySec}s per item</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 font-mono">{st?.averageVelocitySec || 40}s per item</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Active Learning Style</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 font-semibold text-[#8266F0]">{st.learningStyle}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 font-semibold text-[#8266F0]">{st?.learningStyle || "Visual"}</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Primary Cognitive Hurdle</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 text-neutral-800 dark:text-slate-200">{st.primaryStumblingBlock}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 text-neutral-800 dark:text-slate-200">{st?.primaryStumblingBlock || "Concept boundary"}</td>;
                   })}
                 </tr>
 
                 <tr>
                   <td className="p-4 font-bold text-neutral-600 dark:text-slate-400">Peer Study Match</td>
                   {selectedStudentIds.map((id) => {
-                    const st = MOCK_STUDENT_PROFILES.find((s) => s.id === id)!;
-                    return <td key={id} className="p-4 text-xs font-semibold text-emerald-600">{st.recommendedPeerMatch}</td>;
+                    const st = studentProfiles.find((s) => s.id === id);
+                    return <td key={id} className="p-4 text-xs font-semibold text-emerald-600">{st?.recommendedPeerMatch || "Peer study match"}</td>;
                   })}
                 </tr>
               </tbody>
@@ -559,7 +815,7 @@ export const TeacherInsightsView: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {MOCK_REMEDIAL_PODS.map((pod) => (
+            {remedialPods.map((pod) => (
               <div
                 key={pod.id}
                 className="p-5 rounded-2xl bg-neutral-50 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-sm space-y-4 flex flex-col justify-between"
@@ -589,7 +845,7 @@ export const TeacherInsightsView: React.FC = () => {
                     </span>
                     <div className="flex -space-x-2 overflow-hidden">
                       {pod.studentIds.map((stId) => {
-                        const st = MOCK_STUDENT_PROFILES.find((s) => s.id === stId);
+                        const st = studentProfiles.find((s) => s.id === stId);
                         if (!st) return null;
                         return (
                           <img

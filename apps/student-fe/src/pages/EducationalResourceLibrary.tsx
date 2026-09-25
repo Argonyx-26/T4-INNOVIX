@@ -1,19 +1,28 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   BookOpen, Search, Filter, Bookmark, ExternalLink, Play, 
-  FileText, Cpu, CheckCircle2, Sparkles, Layers, Star 
+  FileText, Cpu, CheckCircle2, Sparkles, Layers, Star, Loader2 
 } from "lucide-react";
-import { MOCK_EDUCATIONAL_RESOURCES } from "../data/mockResources";
+import { dataService } from "../services/dataService";
 import { EducationalResource, AcademicTier, AcademicDiscipline } from "../types";
 import { useThemeMode } from "../context/ThemeModeContext";
 
 export const EducationalResourceLibrary: React.FC = () => {
   const { addToast } = useThemeMode();
+  const [resources, setResources] = useState<EducationalResource[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedTier, setSelectedTier] = useState<string>("All Tiers");
   const [selectedMedium, setSelectedMedium] = useState<string>("All Media");
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("All Disciplines");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(["res-3blue1brown-algebra", "res-mit-ocw-binary-search"]);
+
+  useEffect(() => {
+    dataService.getResources().then((data) => {
+      setResources(data);
+      setLoading(false);
+    });
+  }, []);
 
   const toggleBookmark = (id: string, title: string) => {
     setBookmarkedIds((prev) => {
@@ -29,7 +38,7 @@ export const EducationalResourceLibrary: React.FC = () => {
   };
 
   const filteredResources = useMemo(() => {
-    return MOCK_EDUCATIONAL_RESOURCES.filter((res) => {
+    return resources.filter((res) => {
       if (selectedTier !== "All Tiers" && res.tier !== selectedTier) return false;
       if (selectedMedium !== "All Media") {
         if (selectedMedium === "Video Lessons" && res.type !== "video") return false;

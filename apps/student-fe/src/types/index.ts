@@ -173,3 +173,19 @@ export interface ToastMessage {
   description?: string;
   type?: "info" | "success" | "warning";
 }
+
+export type UserRole = "student" | "teacher";
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  photoURL?: string;
+  institution?: string;
+  academicTier?: AcademicTier;
+  department?: string;
+  enrolledCourses?: string[];
+  createdAt?: string;
+  lastLogin?: string;
+}

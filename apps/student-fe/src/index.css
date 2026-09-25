@@ -1,3 +1,4 @@
+@import url('https://fonts.cdnfonts.com/css/open-dyslexic');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -29,7 +30,7 @@
     transition-duration: 150ms !important;
   }
 
-  /* Dyslexic Mode Variables */
+  /* Dyslexic Mode Variables with OpenDyslexic font */
   body.mode-dyslexic {
     --bg-canvas: #FAF8F5;
     --text-primary: #18181B;
@@ -38,7 +39,7 @@
     --accent-pink: #DB2777;
     --surface-card: #FFFFFF;
     --border-color: rgba(24, 24, 27, 0.12);
-    font-family: 'Lexend', 'OpenDyslexic', sans-serif !important;
+    font-family: 'Open-Dyslexic', 'OpenDyslexic', 'Lexend', sans-serif !important;
     line-height: 1.85 !important;
     letter-spacing: 0.05em !important;
     word-spacing: 0.12em !important;
@@ -49,10 +50,18 @@
   body.mode-dyslexic h1,
   body.mode-dyslexic h2,
   body.mode-dyslexic h3,
+  body.mode-dyslexic h4,
   body.mode-dyslexic span,
+  body.mode-dyslexic a,
   body.mode-dyslexic button,
-  body.mode-dyslexic input {
-    font-family: 'Lexend', 'OpenDyslexic', sans-serif !important;
+  body.mode-dyslexic input,
+  body.mode-dyslexic div {
+    font-family: 'Open-Dyslexic', 'OpenDyslexic', 'Lexend', sans-serif !important;
+  }
+
+  body.mode-dyslexic p,
+  body.mode-dyslexic span,
+  body.mode-dyslexic a {
     line-height: 1.85 !important;
     letter-spacing: 0.04em !important;
   }

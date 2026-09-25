@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 export const firebaseConfig = {
@@ -15,4 +15,8 @@ export const firebaseConfig = {
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope("profile");
+googleProvider.addScope("email");
+googleProvider.setCustomParameters({ prompt: "select_account" });
 export default app;
