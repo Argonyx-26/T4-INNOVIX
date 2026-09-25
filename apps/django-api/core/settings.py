@@ -202,7 +202,7 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,
 }
 
-if "test" in sys.argv:
+if "test" in sys.argv or any("test" in arg for arg in sys.argv):
     REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = []
 
 # Firebase Web Configuration for Frontend Setup
