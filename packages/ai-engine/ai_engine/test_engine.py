@@ -3,11 +3,11 @@ Unit tests for LearnLens AI Engine (BE2).
 Pure Python test suite verifying local ML classifier and LLM diagnostic pipelines.
 """
 import unittest
-from ai_engine import (
-    classify_behavior,
-    analyze_misconception,
-    generate_subject_ontology,
-    generate_verification_question,
+from ai_engine.behavior_classifier import classify_behavior
+from ai_engine.cognitive_diagnostic import analyze_misconception
+from ai_engine.ontology import generate_subject_ontology
+from ai_engine.verification import generate_verification_question
+from ai_engine.exceptions import (
     AIEngineError,
     ModelInferenceError,
     CognitiveDiagnosticError,

@@ -80,7 +80,7 @@ def train_and_export_model(export_path: Optional[Path] = None) -> RandomForestCl
     return clf
 
 
-def classify_behavior(time_ms: int, attempt_count: int, hint_used: int) -> str:
+def classify_behavior(time_ms: int, attempt_count: int = 1, hint_used: int = 0, **kwargs) -> str:
     """
     Classifies student attempt behavior into 'CARELESS_ERROR' or 'DEEP_MISCONCEPTION'.
 
@@ -90,6 +90,8 @@ def classify_behavior(time_ms: int, attempt_count: int, hint_used: int) -> str:
     :return: 'CARELESS_ERROR' or 'DEEP_MISCONCEPTION'
     """
     global _CACHED_MODEL
+    if "attempts" in kwargs:
+        attempt_count = kwargs["attempts"]
 
     try:
         # Load or retrieve cached model

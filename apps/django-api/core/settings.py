@@ -10,6 +10,11 @@ import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Monorepo package resolution
+PACKAGES_DIR = BASE_DIR.parent.parent / 'packages' / 'ai-engine'
+if str(PACKAGES_DIR) not in sys.path:
+    sys.path.insert(0, str(PACKAGES_DIR))
+
 
 # Optionally load environment variables from .env if python-dotenv is available
 try:

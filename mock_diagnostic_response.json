@@ -1,0 +1,42 @@
+{
+  "assessment_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "student_id": "student_demo_01",
+  "domain": "algebraic_equations",
+  "mastery_score": 0.50,
+  "latent_ability_theta": -0.25,
+  "learning_gaps": [
+    {
+      "concept_id": "distributive_property",
+      "concept_name": "Distributive Property of Multiplication over Addition",
+      "severity": "critical",
+      "description": "Student failed to distribute the external multiplier factor to the constant term inside parentheses: 2(x + 3) yielded 2x + 3 instead of 2x + 6.",
+      "evidence_item_ids": [
+        "item_demo_eqn_01"
+      ]
+    }
+  ],
+  "misconceptions": [
+    {
+      "concept_id": "distributive_property",
+      "identified_misconception": "Distribution Sign and Constant Multiplier Omission",
+      "explanation": "You multiplied the variable but forgot to distribute the multiplier to the constant (2 * x + 3 = 10 -> 2x = 7 -> x = 3.5).",
+      "detected_in_items": [
+        "item_demo_eqn_01"
+      ]
+    }
+  ],
+  "recommended_interventions": [
+    {
+      "intervention_id": "dist_01",
+      "title": "Interactive Distributive Property Visualizer & Balance Scale",
+      "type": "conceptual_reframing",
+      "priority": "high",
+      "actionable_steps": [
+        "Review visual area grid model demonstrating 2 * (x + 3) = 2x + 6",
+        "Complete 3 scaffolded single-step distribution drills",
+        "Retest and solve the multi-step equation 2(x + 3) = 10"
+      ]
+    }
+  ],
+  "summary_narrative": "Diagnostic analysis confirms a Distribution Error. When solving 2(x + 3) = 10, the factor 2 was multiplied by x but omitted from the constant 3, resulting in 2x + 3 = 10 and the erroneous answer x = 3.5. Mastery is currently estimated at 50% with priority remediation assigned to distributive property expansion."
+}

@@ -5,6 +5,11 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    PACKAGES_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', '..', 'packages', 'ai-engine'))
+    if PACKAGES_DIR not in sys.path:
+        sys.path.insert(0, PACKAGES_DIR)
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     try:
         from django.core.management import execute_from_command_line
@@ -15,6 +20,7 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
+
 
 if __name__ == '__main__':
     main()
