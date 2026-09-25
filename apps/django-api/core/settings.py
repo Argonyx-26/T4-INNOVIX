@@ -1,212 +1,216 @@
 """
-Django settings for learnlens_backend project.
+Django settings for LearnLens Backend (learnlens_backend / core).
 
-Generated for LearnLens - Domain-Agnostic Educational Diagnostic Engine.
-Deployment Target: Render (Web Service)
+Configured for Render deployment and local development.
+Includes CORS headers, Django REST Framework, WhiteNoise static handling,
+and Firebase Admin SDK initialization stub.
 """
-from pathlib import Path
+
 import os
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Monorepo package resolution
-PACKAGES_DIR = BASE_DIR.parent.parent / 'packages' / 'ai-engine'
-if str(PACKAGES_DIR) not in sys.path:
-    sys.path.insert(0, str(PACKAGES_DIR))
+for candidate in [
+    BASE_DIR.parent.parent / "packages" / "ai-engine",
+    BASE_DIR / "packages" / "ai-engine",
+]:
+    if candidate.exists() and str(candidate) not in sys.path:
+        sys.path.insert(0, str(candidate))
 
+# Load unified environment variables (.env)
+for env_path in [
+    BASE_DIR / ".env",
+    BASE_DIR.parent.parent / ".env",
+]:
+    if env_path.exists():
+        load_dotenv(env_path)
 
-# Optionally load environment variables from .env if python-dotenv is available
-try:
-    from dotenv import load_dotenv
-    load_dotenv(BASE_DIR / '.env')
-except ImportError:
-    pass
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
+# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-learnlens-diagnostic-engine-dev-secret-key-replace-in-prod'
+    "SECRET_KEY",
+    os.getenv(
+        "DJANGO_SECRET_KEY",
+        "django-insecure-learnlens-diagnostic-engine-dev-secret-key-change-in-prod"
+    )
 )
 
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = os.getenv("DEBUG", os.getenv("DJANGO_DEBUG", "True")).lower() in ("true", "1", "yes")
 
-# Host configuration for Local & Render Web Service
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
+# Allowed hosts configuration (supporting local dev and Render)
+raw_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1],.onrender.com,testserver")
+ALLOWED_HOSTS = [host.strip() for host in raw_hosts.split(",") if host.strip()]
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-if DEBUG:
-    ALLOWED_HOSTS.append('*')
-
+if "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("testserver")
+if DEBUG and "*" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("*")
 
 # Application definition
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    # Django Built-in Apps
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
 
-    # Third-party packages
-    'corsheaders',
-    'rest_framework',
+    # Third-Party Apps
+    "corsheaders",
+    "rest_framework",
 
-    # Local application modules
-    'api.apps.ApiConfig',
+    # LearnLens Modular Apps
+    "api.apps.ApiConfig",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
+    # CORS middleware must precede CommonMiddleware
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
 ]
 
-# Enable WhiteNoise for static files on Render if installed
 try:
-    import whitenoise
-    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
+    import whitenoise  # noqa: F401
+    MIDDLEWARE.append("whitenoise.middleware.WhiteNoiseMiddleware")  # Render optimized static files
 except ImportError:
     pass
 
 MIDDLEWARE.extend([
-    # CORS middleware must precede CommonMiddleware
-    'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ])
 
-ROOT_URLCONF = 'core.urls'
+
+ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
-ASGI_APPLICATION = 'core.asgi.application'
-
+WSGI_APPLICATION = "core.wsgi.application"
+ASGI_APPLICATION = "core.asgi.application"
 
 # Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-# Support PostgreSQL on Render via dj-database-url if DATABASE_URL is set
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
+# Default to SQLite for local development; supports DATABASE_URL in production (Render)
+database_url = os.getenv("DATABASE_URL")
+if database_url:
     try:
         import dj_database_url
-        DATABASES['default'] = dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True
-        )
+        DATABASES = {"default": dj_database_url.config(default=database_url, conn_max_age=600)}
     except ImportError:
-        pass
-
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.0/topics/i18n/
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-try:
-    import whitenoise
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-except ImportError:
-    pass
-
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
-# ==============================================================================
-# CORS Configuration (Instruction #5)
-# ==============================================================================
-# Allow CORS for local development frontends (React, Vite, Next.js, Vue, etc.)
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+# CORS Headers Configuration
+CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False" if not DEBUG else "True").lower() in ("true", "1", "yes")
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
+    origin.strip() for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+    ).split(",") if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 
-
-# ==============================================================================
 # Django REST Framework Configuration
-# ==============================================================================
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "core.authentication.FirebaseAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-        'rest_framework.parsers.FormParser',
-        'rest_framework.parsers.MultiPartParser',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
     ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("DRF_ANON_THROTTLE_RATE", "10/min"),
+        "user": os.getenv("DRF_USER_THROTTLE_RATE", "60/min"),
+    },
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
+    "UNAUTHENTICATED_USER": None,
 }
 
+if "test" in sys.argv or any("test" in arg for arg in sys.argv):
+    REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = []
 
-# ==============================================================================
-# Firebase Admin SDK Stub Initialization (Instruction #5)
-# ==============================================================================
-from core.firebase import initialize_firebase
-FIREBASE_APP = initialize_firebase()
+# Firebase Web Configuration for Frontend Setup
+FIREBASE_WEB_CONFIG = {
+    "apiKey": os.getenv("FIREBASE_API_KEY", "AIzaSyBthKMnShNRdfR4r4KaUfpVOWJ3ogQ4RZw"),
+    "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN", "gen-lang-client-0427554587.firebaseapp.com"),
+    "projectId": os.getenv("FIREBASE_PROJECT_ID", "gen-lang-client-0427554587"),
+    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET", "gen-lang-client-0427554587.firebasestorage.app"),
+    "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID", "229055675286"),
+    "appId": os.getenv("FIREBASE_APP_ID", "1:229055675286:web:6ed01f89c92ffb5a087bb7"),
+}

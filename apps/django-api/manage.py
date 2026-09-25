@@ -2,15 +2,20 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from pathlib import Path
+
 
 def main():
     """Run administrative tasks."""
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    PACKAGES_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', '..', 'packages', 'ai-engine'))
-    if PACKAGES_DIR not in sys.path:
-        sys.path.insert(0, PACKAGES_DIR)
+    base_dir = Path(__file__).resolve().parent
+    for candidate in [
+        base_dir.parent.parent / "packages" / "ai-engine",
+        base_dir / "packages" / "ai-engine",
+    ]:
+        if candidate.exists() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
 
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -22,5 +27,5 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

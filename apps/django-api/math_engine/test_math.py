@@ -2,8 +2,15 @@
 Unit tests for Math Engine: Scoring and Item Response Theory (IRT).
 Verifies statistical formulas, 1PL Rasch probability, and Newton-Raphson estimation.
 """
+import sys
 import unittest
 import math
+from pathlib import Path
+
+django_api_dir = Path(__file__).resolve().parent.parent
+if str(django_api_dir) not in sys.path:
+    sys.path.insert(0, str(django_api_dir))
+
 from math_engine.scoring import calculate_mastery_score, CONFIDENCE_WEIGHTS
 from math_engine.irt import rasch_probability, estimate_latent_ability
 

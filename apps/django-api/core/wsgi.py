@@ -1,9 +1,12 @@
 """
-WSGI config for learnlens_backend project.
+WSGI config for LearnLens Backend project.
+
+It exposes the WSGI callable as a module-level variable named ``application``.
+Used by Gunicorn in Render production deployment.
 """
 import os
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 application = get_wsgi_application()

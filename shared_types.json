@@ -37,66 +37,160 @@
           "description": "List of student responses across assessment items.",
           "minItems": 1,
           "items": {
-            "type": "object",
-            "required": [
-              "item_id",
-              "user_answer",
-              "time_spent_seconds"
-            ],
-            "properties": {
-              "item_id": {
-                "type": "string",
-                "description": "Unique identifier for the diagnostic question/item."
-              },
-              "user_answer": {
-                "type": ["string", "number", "boolean", "array"],
-                "description": "The response given by the learner."
-              },
-              "is_correct": {
-                "type": ["boolean", "null"],
-                "description": "Pre-graded correctness flag if evaluated client-side, otherwise null."
-              },
-              "time_spent_seconds": {
-                "type": "number",
-                "minimum": 0,
-                "description": "Time spent answering this item in seconds."
-              },
-              "hints_used": {
-                "type": "integer",
-                "minimum": 0,
-                "default": 0,
-                "description": "Number of hints requested for this item."
-              },
-              "confidence_level": {
-                "type": "string",
-                "enum": ["low", "medium", "high"],
-                "description": "Learner's self-reported confidence."
-              }
-            }
+            "$ref": "#/definitions/ItemResponse"
           }
         },
         "metadata": {
           "type": "object",
-          "description": "Optional contextual session metadata.",
-          "properties": {
-            "grade_level": {
-              "type": "string"
-            },
-            "curriculum_standard": {
-              "type": "string"
-            },
-            "client_version": {
-              "type": "string"
-            }
-          },
+          "description": "Optional contextual client metadata (grade level, school, etc.).",
           "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ItemResponse": {
+      "type": "object",
+      "required": [
+        "item_id",
+        "user_answer",
+        "time_spent_seconds"
+      ],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "description": "Unique identifier for the diagnostic question/item."
+        },
+        "user_answer": {
+          "type": ["string", "number", "boolean", "array"],
+          "description": "The response given by the learner."
+        },
+        "is_correct": {
+          "type": ["boolean", "null"],
+          "description": "Pre-graded correctness flag if evaluated client-side, otherwise null."
+        },
+        "time_spent_seconds": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Duration spent on this item in seconds."
+        },
+        "hints_used": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Number of hints accessed for this problem."
+        },
+        "confidence_level": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "default": "medium",
+          "description": "Self-reported confidence level."
+        }
+      },
+      "additionalProperties": false
+    },
+    "LearningGap": {
+      "type": "object",
+      "required": [
+        "concept_id",
+        "concept_name",
+        "severity",
+        "description",
+        "evidence_item_ids"
+      ],
+      "properties": {
+        "concept_id": {
+          "type": "string",
+          "description": "Machine-readable identifier of the specific concept gap."
+        },
+        "concept_name": {
+          "type": "string",
+          "description": "Human-readable label for the concept."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "moderate", "minor"],
+          "description": "Pedagogical severity of the learning deficit."
+        },
+        "description": {
+          "type": "string",
+          "description": "Diagnostic explanation of the learning gap."
+        },
+        "evidence_item_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Question IDs demonstrating this gap."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Misconception": {
+      "type": "object",
+      "required": [
+        "concept_id",
+        "identified_misconception",
+        "explanation",
+        "detected_in_items"
+      ],
+      "properties": {
+        "concept_id": {
+          "type": "string",
+          "description": "Concept where the misconception manifested."
+        },
+        "identified_misconception": {
+          "type": "string",
+          "description": "Title or label of the specific cognitive fallacy."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Pedagogical explanation of why student committed this error."
+        },
+        "detected_in_items": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Items where this pattern was exhibited."
+        }
+      },
+      "additionalProperties": false
+    },
+    "RecommendedIntervention": {
+      "type": "object",
+      "required": [
+        "intervention_id",
+        "title",
+        "type",
+        "priority",
+        "actionable_steps"
+      ],
+      "properties": {
+        "intervention_id": {
+          "type": "string",
+          "description": "Unique identifier for this recommended intervention."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short heading for the learning intervention."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["remedial_lesson", "practice_drill", "conceptual_reframing", "scaffolded_walkthrough"],
+          "description": "Pedagogical format of the intervention."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Urgency of intervention."
+        },
+        "actionable_steps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Concrete steps the learner or instructor should execute."
         }
       },
       "additionalProperties": false
     },
     "LLMDiagnosticResponse": {
       "type": "object",
-      "description": "Exact JSON payload that the LLM engine must return upon diagnostic evaluation.",
+      "description": "Expected structured output from AI diagnostic synthesis.",
       "required": [
         "assessment_id",
         "student_id",
@@ -111,134 +205,40 @@
       "properties": {
         "assessment_id": {
           "type": "string",
-          "format": "uuid",
-          "description": "Matches the assessment_id from submission."
+          "format": "uuid"
         },
         "student_id": {
-          "type": "string",
-          "description": "Matches the student_id from submission."
+          "type": "string"
         },
         "domain": {
-          "type": "string",
-          "description": "The diagnostic domain evaluated."
+          "type": "string"
         },
         "mastery_score": {
           "type": "number",
           "minimum": 0.0,
           "maximum": 1.0,
-          "description": "Normalized holistic mastery level between 0.0 and 1.0."
+          "description": "Normalized overall domain mastery (0.0 = zero mastery, 1.0 = full mastery)."
         },
         "latent_ability_theta": {
           "type": "number",
-          "description": "Item Response Theory (IRT) estimated latent ability parameter (typically -3.0 to +3.0)."
+          "description": "Item Response Theory (IRT) estimated latent ability parameter (-3.0 to +3.0)."
         },
         "learning_gaps": {
           "type": "array",
-          "description": "Identified conceptual weaknesses and deficiencies.",
           "items": {
-            "type": "object",
-            "required": [
-              "concept_id",
-              "concept_name",
-              "severity",
-              "description",
-              "evidence_item_ids"
-            ],
-            "properties": {
-              "concept_id": {
-                "type": "string",
-                "description": "Unique concept or sub-skill identifier."
-              },
-              "concept_name": {
-                "type": "string",
-                "description": "Human-readable label of the deficient concept."
-              },
-              "severity": {
-                "type": "string",
-                "enum": ["critical", "moderate", "minor"],
-                "description": "Impact of this gap on domain mastery progression."
-              },
-              "description": {
-                "type": "string",
-                "description": "Detailed explanation of why this is considered a gap."
-              },
-              "evidence_item_ids": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Item IDs supporting this diagnosis."
-              }
-            }
+            "$ref": "#/definitions/LearningGap"
           }
         },
         "misconceptions": {
           "type": "array",
-          "description": "Cognitive fallacies, invalid heuristics, or persistent erroneous mental models.",
           "items": {
-            "type": "object",
-            "required": [
-              "concept_id",
-              "identified_misconception",
-              "explanation",
-              "detected_in_items"
-            ],
-            "properties": {
-              "concept_id": {
-                "type": "string",
-                "description": "Concept where the misconception occurred."
-              },
-              "identified_misconception": {
-                "type": "string",
-                "description": "Label of the erroneous mental model."
-              },
-              "explanation": {
-                "type": "string",
-                "description": "Mechanistic reason why the learner's thinking was flawed."
-              },
-              "detected_in_items": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "List of item IDs exhibiting this misconception pattern."
-              }
-            }
+            "$ref": "#/definitions/Misconception"
           }
         },
         "recommended_interventions": {
           "type": "array",
-          "description": "Prescribed pedagogical remediation actions tailored to the learner.",
           "items": {
-            "type": "object",
-            "required": [
-              "intervention_id",
-              "title",
-              "type",
-              "priority",
-              "actionable_steps"
-            ],
-            "properties": {
-              "intervention_id": {
-                "type": "string",
-                "description": "Unique identifier for this recommended intervention."
-              },
-              "title": {
-                "type": "string",
-                "description": "Short heading for the learning intervention."
-              },
-              "type": {
-                "type": "string",
-                "enum": ["remedial_lesson", "practice_drill", "conceptual_reframing", "scaffolded_walkthrough"],
-                "description": "Pedagogical format of the intervention."
-              },
-              "priority": {
-                "type": "string",
-                "enum": ["high", "medium", "low"],
-                "description": "Urgency of intervention."
-              },
-              "actionable_steps": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Concrete steps the learner or instructor should execute."
-              }
-            }
+            "$ref": "#/definitions/RecommendedIntervention"
           }
         },
         "summary_narrative": {
@@ -247,6 +247,35 @@
         }
       },
       "additionalProperties": false
+    }
+  },
+  "contracts": {
+    "assessment_submission_request": {
+      "endpoint": "POST /api/assessments/submit/",
+      "type": "object",
+      "required": ["assessment_id", "user_id", "subject_domain", "responses"],
+      "properties": {
+        "assessment_id": { "type": "string", "format": "uuid" },
+        "user_id": { "type": "string" },
+        "subject_domain": { "type": "string" },
+        "responses": { "type": "array" }
+      }
+    },
+    "math_metrics": {
+      "type": "object",
+      "required": ["theta_score", "standard_error", "percentile_rank", "raw_score", "total_items", "topic_mastery"],
+      "properties": {
+        "theta_score": { "type": "number" },
+        "standard_error": { "type": "number" },
+        "percentile_rank": { "type": "number" },
+        "raw_score": { "type": "integer" },
+        "total_items": { "type": "integer" },
+        "topic_mastery": { "type": "object" }
+      }
+    },
+    "assessment_submission_response": {
+      "type": "object",
+      "required": ["submission_id", "assessment_id", "user_id", "status", "processed_at", "math_metrics", "ai_diagnostic"]
     }
   },
   "examples": {

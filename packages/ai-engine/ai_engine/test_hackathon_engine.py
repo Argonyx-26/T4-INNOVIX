@@ -6,7 +6,14 @@ Verifies:
 3. diagnostics.py: Misconception diagnosis with native JSON schema conformity
 4. generators.py: Concept graph, visual analogy intervention, and verification question generation
 """
+import sys
 import unittest
+from pathlib import Path
+
+pkg_root = Path(__file__).resolve().parent.parent
+if str(pkg_root) not in sys.path:
+    sys.path.insert(0, str(pkg_root))
+
 from ai_engine.classifier import classify_behavior, train_and_export_model
 from ai_engine.fallbacks import get_demo_fallback
 from ai_engine.diagnostics import analyze_misconception

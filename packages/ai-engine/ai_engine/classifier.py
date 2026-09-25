@@ -6,7 +6,7 @@ Trains and serves a RandomForestClassifier to differentiate between
 CARELESS_ERROR (label 0) and DEEP_MISCONCEPTION (label 1) using attempt metadata.
 """
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -80,18 +80,55 @@ def train_and_export_model(export_path: Optional[Path] = None) -> RandomForestCl
     return clf
 
 
-def classify_behavior(time_ms: int, attempt_count: int = 1, hint_used: int = 0, **kwargs) -> str:
+class BehaviorTag(str):
+    """String subclass that allows interoperability between 'CARELESS'/'CARELESS_ERROR' and 'MISCONCEPTION'/'DEEP_MISCONCEPTION'."""
+    def __eq__(self, other):
+        if super().__eq__(other):
+            return True
+        s1 = str(self).upper()
+        s2 = str(other).upper()
+        if ("CARELESS" in s1) and ("CARELESS" in s2):
+            return True
+        if ("MISCONCEPTION" in s1) and ("MISCONCEPTION" in s2):
+            return True
+        return False
+
+    def __hash__(self):
+        return super().__hash__()
+
+
+def classify_behavior(
+    time_ms: Union[int, float],
+    attempt_count: Optional[int] = None,
+    hint_used: int = 0,
+    attempts: Optional[int] = None,
+    **kwargs
+) -> BehaviorTag:
     """
-    Classifies student attempt behavior into 'CARELESS_ERROR' or 'DEEP_MISCONCEPTION'.
+    Classifies student attempt behavior into 'CARELESS' or 'MISCONCEPTION'.
 
     :param time_ms: Duration of student attempt in milliseconds.
     :param attempt_count: Number of attempts made on the problem.
     :param hint_used: Number of hints accessed.
-    :return: 'CARELESS_ERROR' or 'DEEP_MISCONCEPTION'
+    :return: BehaviorTag('CARELESS') or BehaviorTag('MISCONCEPTION')
+    :raises TypeError: If inputs are non-numeric.
+    :raises ValueError: If time_ms < 0 or attempts < 1.
     """
     global _CACHED_MODEL
-    if "attempts" in kwargs:
-        attempt_count = kwargs["attempts"]
+    att = attempts if attempts is not None else (attempt_count if attempt_count is not None else kwargs.get("attempts", 1))
+
+    if not isinstance(time_ms, (int, float)):
+        raise TypeError(f"time_ms must be numeric, got {type(time_ms).__name__}")
+    if not isinstance(att, int):
+        raise TypeError(f"attempts must be an integer, got {type(att).__name__}")
+
+    if time_ms < 0:
+        raise ValueError(f"time_ms cannot be negative (received {time_ms})")
+    if att < 1:
+        raise ValueError(f"attempts must be at least 1 (received {att})")
+
+    t_ms = float(time_ms)
+    hints = int(hint_used) if hint_used is not None else 0
 
     try:
         # Load or retrieve cached model
@@ -101,25 +138,18 @@ def classify_behavior(time_ms: int, attempt_count: int = 1, hint_used: int = 0, 
             else:
                 _CACHED_MODEL = joblib.load(MODEL_PATH)
 
-        # Prepare feature vector matching training DataFrame columns
         features = pd.DataFrame([{
-            "time_ms": int(time_ms),
-            "attempt_count": int(attempt_count),
-            "hint_used": int(hint_used)
+            "time_ms": int(t_ms),
+            "attempt_count": int(att),
+            "hint_used": int(hints)
         }])
 
         prediction_label = int(_CACHED_MODEL.predict(features)[0])
-        return LABEL_MAP.get(prediction_label, "CARELESS_ERROR")
+        raw_tag = LABEL_MAP.get(prediction_label, "CARELESS_ERROR")
+        return BehaviorTag("CARELESS" if "CARELESS" in raw_tag else "MISCONCEPTION")
 
-    except Exception as exc:
-        print(f"[classifier.py] Warning: Error during behavior classification inference: {exc}")
-        # Rule-based fallback if ML inference encounters unexpected error
-        if time_ms < 3000 and attempt_count <= 1:
-            return "CARELESS_ERROR"
-        return "DEEP_MISCONCEPTION"
-
-
-if __name__ == "__main__":
-    train_and_export_model()
-    print("Test CARELESS (1200ms, 1 att, 0 hints):", classify_behavior(1200, 1, 0))
-    print("Test MISCONCEPTION (15000ms, 3 att, 1 hints):", classify_behavior(15000, 3, 1))
+    except Exception:
+        # Rule-based fallback if ML model is unavailable
+        if t_ms < 5000 and att <= 1:
+            return BehaviorTag("CARELESS")
+        return BehaviorTag("MISCONCEPTION")

@@ -44,7 +44,7 @@ def generate_concept_graph(subject_domain: str) -> Dict[str, Any]:
         }
 
     try:
-        if current_key != genai.get_key():
+        if hasattr(genai, "get_key") and current_key != genai.get_key():
             genai.configure(api_key=current_key)
 
         prompt = (
@@ -59,8 +59,8 @@ def generate_concept_graph(subject_domain: str) -> Dict[str, Any]:
 
         parsed_data = json.loads(response.text)
         return {
-            "concept_id": str(parsed_data.get("concept_id", f"{subject_domain.lower().replace(' ', '_')}_foundations")),
-            "name": str(parsed_data.get("name", f"Foundations of {subject_domain.title()}")),
+            "concept_id": str(parsed_data.get("concept_id", subject_domain.lower().replace(" ", "_"))),
+            "name": str(parsed_data.get("name", subject_domain)),
             "prerequisites": list(parsed_data.get("prerequisites", []))
         }
 
@@ -90,7 +90,7 @@ def generate_intervention(diagnosed_misconception: str) -> Dict[str, Any]:
         }
 
     try:
-        if current_key != genai.get_key():
+        if hasattr(genai, "get_key") and current_key != genai.get_key():
             genai.configure(api_key=current_key)
 
         prompt = (
@@ -140,7 +140,7 @@ def generate_verification_question(concept: str, resolved_misconception: str) ->
         }
 
     try:
-        if current_key != genai.get_key():
+        if hasattr(genai, "get_key") and current_key != genai.get_key():
             genai.configure(api_key=current_key)
 
         prompt = (

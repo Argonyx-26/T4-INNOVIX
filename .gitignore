@@ -1,13 +1,11 @@
-# Byte-compiled / optimized / DLL files
+# Python Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
+.Python
 
 # Distribution / packaging
-.Python
 build/
 develop-eggs/
 dist/
@@ -26,21 +24,28 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Django stuff:
+# Virtual Environments
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Django & SQLite
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+media/
 staticfiles/
 
-# Environments
+# Firebase & Secret credentials
+*.pem
+*firebase*.json
+service-account*.json
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+!.env.example
 
 # IDE files
 .vscode/
@@ -48,6 +53,6 @@ venv.bak/
 *.swp
 *~
 
-# Firebase credentials
-*firebase*.json
-service-account*.json
+# OS specific files
+.DS_Store
+Thumbs.db

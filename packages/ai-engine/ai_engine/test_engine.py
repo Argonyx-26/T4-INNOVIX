@@ -2,7 +2,14 @@
 Unit tests for LearnLens AI Engine (BE2).
 Pure Python test suite verifying local ML classifier and LLM diagnostic pipelines.
 """
+import sys
 import unittest
+from pathlib import Path
+
+pkg_root = Path(__file__).resolve().parent.parent
+if str(pkg_root) not in sys.path:
+    sys.path.insert(0, str(pkg_root))
+
 from ai_engine.behavior_classifier import classify_behavior
 from ai_engine.cognitive_diagnostic import analyze_misconception
 from ai_engine.ontology import generate_subject_ontology

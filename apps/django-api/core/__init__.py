@@ -1,3 +1,3 @@
 """
-Core configuration package for LearnLens backend.
+Core package for LearnLens Backend project.
 """
