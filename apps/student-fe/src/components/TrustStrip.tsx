@@ -20,7 +20,7 @@ export const TrustStrip: React.FC = () => {
                 key={idx}
                 className="flex items-center space-x-3.5 p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition"
               >
-                <div className="w-12 h-12 rounded-2xl bg-[#8266F0]/10 dark:bg-[#8266F0]/20 text-[#8266F0] flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-brand/10 dark:bg-brand/20 text-brand flex items-center justify-center flex-shrink-0">
                   <Icon className="w-6 h-6" />
                 </div>
                 <div>

@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import { 
-  Zap, Clock, Award, TrendingUp, Sliders, ArrowRight, RotateCcw, 
-  CheckCircle2, Sparkles, Scale, Activity, Play, Info, HelpCircle
-} from "lucide-react";
+import { Zap, Clock, Award, TrendingUp, Sliders, ArrowRight, RotateCcw, CheckCircle2, Sparkles, Scale, Activity, Play, Info, HelpCircle, Lightbulb } from "lucide-react";
 import { useThemeMode } from "../context/ThemeModeContext";
 
 export const AdaptivePacing: React.FC = () => {
@@ -60,7 +57,7 @@ export const AdaptivePacing: React.FC = () => {
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 font-display mb-4">
           Intelligent Adaptive Pacing
         </h1>
-        <p className="text-neutral-600 dark:text-neutral-400 text-base sm:text-lg leading-relaxed">
+        <p className="adhd-hide text-neutral-600 dark:text-neutral-400 text-base sm:text-lg leading-relaxed">
           Traditional curricula force students into a rigid calendar pace. LearnLens continuously measures cognitive recovery velocity, automatically compacting mastered modules and unlocking interactive cognitive labs.
         </p>
       </div>
@@ -78,7 +75,7 @@ export const AdaptivePacing: React.FC = () => {
             <div className="text-3xl font-bold font-display text-neutral-900 dark:text-white">
               2.4x
             </div>
-            <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center space-x-1">
+            <p className="adhd-hide text-xs text-emerald-600 font-medium mt-1 flex items-center space-x-1">
               <TrendingUp className="w-3.5 h-3.5 inline" />
               <span>Faster than standard linear progression</span>
             </p>
@@ -86,7 +83,7 @@ export const AdaptivePacing: React.FC = () => {
         </div>
 
         <div className="bg-white dark:bg-[#1E1E24] p-6 rounded-3xl border border-black/5 dark:border-white/10 shadow-sm flex items-start space-x-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#8266F0]/10 text-[#8266F0] flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center shrink-0">
             <Clock className="w-6 h-6" />
           </div>
           <div>
@@ -96,7 +93,7 @@ export const AdaptivePacing: React.FC = () => {
             <div className="text-3xl font-bold font-display text-neutral-900 dark:text-white">
               34.5 Hrs
             </div>
-            <p className="text-xs text-neutral-500 font-medium mt-1">
+            <p className="adhd-hide text-xs text-neutral-500 font-medium mt-1">
               By clearing prerequisite debt instead of repeating topics
             </p>
           </div>
@@ -113,7 +110,7 @@ export const AdaptivePacing: React.FC = () => {
             <div className="text-3xl font-bold font-display text-neutral-900 dark:text-white">
               92.8%
             </div>
-            <p className="text-xs text-neutral-500 font-medium mt-1">
+            <p className="adhd-hide text-xs text-neutral-500 font-medium mt-1">
               Isomorphic retention rate measured at 14-day intervals
             </p>
           </div>
@@ -127,7 +124,7 @@ export const AdaptivePacing: React.FC = () => {
             <h2 className="text-xl sm:text-2xl font-bold font-display text-neutral-900 dark:text-white">
               Learning Trajectory: Linear School vs. LearnLens Adaptive
             </h2>
-            <p className="text-sm text-neutral-500 mt-1">
+            <p className="adhd-hide text-sm text-neutral-500 mt-1">
               Comparison across Class 9 algebra syllabus (Terms 1 & 2)
             </p>
           </div>
@@ -137,8 +134,8 @@ export const AdaptivePacing: React.FC = () => {
               <span className="text-neutral-500">Standard School (Linear 1.0x)</span>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-[#8266F0]"></span>
-              <span className="text-[#8266F0] font-semibold">LearnLens AI Adaptive (2.4x)</span>
+              <span className="w-3 h-3 rounded-full bg-brand"></span>
+              <span className="text-brand font-semibold">LearnLens AI Adaptive (2.4x)</span>
             </div>
           </div>
         </div>
@@ -153,7 +150,7 @@ export const AdaptivePacing: React.FC = () => {
             </div>
             <div className="border-b border-dashed border-black/5 dark:border-white/10 pb-1 flex justify-between text-[11px] text-neutral-400">
               <span>Stage 4: Quadratic & Complex Systems</span>
-              <span className="text-[#8266F0] font-semibold">LearnLens Day 35</span>
+              <span className="text-brand font-semibold">LearnLens Day 35</span>
             </div>
             <div className="border-b border-dashed border-black/5 dark:border-white/10 pb-1 flex justify-between text-[11px] text-neutral-400">
               <span>Stage 3: Linear Equations Mastery</span>
@@ -179,20 +176,20 @@ export const AdaptivePacing: React.FC = () => {
               <div className="w-full h-3 rounded-full bg-neutral-200 dark:bg-white/10 overflow-hidden">
                 <div className="h-full bg-neutral-400 rounded-full" style={{ width: "45%" }}></div>
               </div>
-              <p className="text-[11px] text-neutral-500 mt-2">
+              <p className="adhd-hide text-[11px] text-neutral-500 mt-2">
                 42% of classroom time spent reviewing misconceptions student already understood, or blocked on undetected prerequisite gaps.
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#8266F0]/10 border border-[#8266F0]/20">
+            <div className="p-4 rounded-2xl bg-brand/10 border border-brand/20">
               <div className="flex justify-between text-xs font-semibold mb-2">
-                <span className="text-[#8266F0]">LearnLens Cognitive Pacing</span>
-                <span className="text-[#8266F0] font-bold">54 Days to Full Mastery</span>
+                <span className="text-brand">LearnLens Cognitive Pacing</span>
+                <span className="text-brand font-bold">54 Days to Full Mastery</span>
               </div>
-              <div className="w-full h-3 rounded-full bg-[#8266F0]/20 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#8266F0] to-[#EC4899] rounded-full" style={{ width: "92%" }}></div>
+              <div className="w-full h-3 rounded-full bg-brand/20 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-brand to-[#EC4899] rounded-full" style={{ width: "92%" }}></div>
               </div>
-              <p className="text-[11px] text-[#8266F0] font-medium mt-2">
+              <p className="adhd-hide text-[11px] text-brand font-medium mt-2">
                 60-second micro-interventions remove negative integer sign debt immediately, accelerating polynomial and quadratic modules.
               </p>
             </div>
@@ -204,14 +201,14 @@ export const AdaptivePacing: React.FC = () => {
       <div>
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-[#8266F0] uppercase tracking-wider mb-1">
+            <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-brand uppercase tracking-wider mb-1">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Hands-on Mental Model Simulators</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold font-display text-neutral-900 dark:text-white">
               Interactive Cognitive Labs
             </h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+            <p className="adhd-hide text-sm text-neutral-600 dark:text-neutral-400 mt-1">
               Manipulate concrete models to cement the abstract rules discovered in diagnostic assessments.
             </p>
           </div>
@@ -222,7 +219,7 @@ export const AdaptivePacing: React.FC = () => {
               onClick={() => setActiveLab("distributive")}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                 activeLab === "distributive"
-                  ? "bg-white dark:bg-neutral-800 text-[#8266F0] shadow-sm"
+                  ? "bg-white dark:bg-neutral-800 text-brand shadow-sm"
                   : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
               }`}
             >
@@ -232,7 +229,7 @@ export const AdaptivePacing: React.FC = () => {
               onClick={() => setActiveLab("signs")}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                 activeLab === "signs"
-                  ? "bg-white dark:bg-neutral-800 text-[#8266F0] shadow-sm"
+                  ? "bg-white dark:bg-neutral-800 text-brand shadow-sm"
                   : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
               }`}
             >
@@ -242,7 +239,7 @@ export const AdaptivePacing: React.FC = () => {
               onClick={() => setActiveLab("scales")}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                 activeLab === "scales"
-                  ? "bg-white dark:bg-neutral-800 text-[#8266F0] shadow-sm"
+                  ? "bg-white dark:bg-neutral-800 text-brand shadow-sm"
                   : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900"
               }`}
             >
@@ -261,13 +258,13 @@ export const AdaptivePacing: React.FC = () => {
                   <h3 className="text-xl font-bold font-display text-neutral-900 dark:text-white">
                     Distributive Law Area Simulator: a(b + c) = ab + ac
                   </h3>
-                  <p className="text-sm text-neutral-500">
+                  <p className="adhd-clamp text-sm text-neutral-500">
                     See why the outside multiplier <code className="bg-neutral-100 dark:bg-white/10 px-1.5 py-0.5 rounded text-neutral-800 dark:text-neutral-200 font-mono font-bold">a</code> distributes to EVERY term inside the bracket.
                   </p>
                 </div>
                 <div className="text-right">
                   <span className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">Total Area</span>
-                  <div className="text-2xl font-bold text-[#8266F0] font-mono">
+                  <div className="text-2xl font-bold text-brand font-mono">
                     {factorA} × ({termB} + {termC}) = {factorA * (termB + termC)}
                   </div>
                 </div>
@@ -278,7 +275,7 @@ export const AdaptivePacing: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-2">
                     <span>Outside Multiplier (a):</span>
-                    <span className="font-mono text-[#8266F0] font-bold text-sm">{factorA}</span>
+                    <span className="font-mono text-brand font-bold text-sm">{factorA}</span>
                   </div>
                   <input
                     type="range"
@@ -286,7 +283,7 @@ export const AdaptivePacing: React.FC = () => {
                     max="8"
                     value={factorA}
                     onChange={(e) => setFactorA(Number(e.target.value))}
-                    className="w-full accent-[#8266F0]"
+                    className="w-full accent-brand"
                   />
                 </div>
 
@@ -328,8 +325,8 @@ export const AdaptivePacing: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 max-w-full overflow-x-auto pb-4">
                   {/* Height Indicator */}
-                  <div className="h-44 flex flex-col items-center justify-center pr-3 border-r-2 border-dashed border-[#8266F0]">
-                    <span className="text-xs font-mono font-bold text-[#8266F0] rotate-[-90deg] whitespace-nowrap">
+                  <div className="h-44 flex flex-col items-center justify-center pr-3 border-r-2 border-dashed border-brand">
+                    <span className="text-xs font-mono font-bold text-brand rotate-[-90deg] whitespace-nowrap">
                       Height a = {factorA}
                     </span>
                   </div>
@@ -362,7 +359,7 @@ export const AdaptivePacing: React.FC = () => {
                 </div>
 
                 <div className="mt-4 p-4 rounded-2xl bg-neutral-100 dark:bg-white/5 text-sm text-center max-w-xl text-neutral-600 dark:text-neutral-400">
-                  💡 <strong>Cognitive Key:</strong> Notice how the height <strong className="text-[#8266F0]">{factorA}</strong> is shared by both rectangles. That is why multiplying only the first term and writing <code className="text-rose-500">{factorA}x + {termC}</code> is a geometric violation!
+                  <Lightbulb className="inline w-4 h-4 -mt-0.5 mr-1" aria-hidden="true" /><strong>Cognitive Key:</strong> Notice how the height <strong className="text-brand">{factorA}</strong> is shared by both rectangles. That is why multiplying only the first term and writing <code className="text-rose-500">{factorA}x + {termC}</code> is a geometric violation!
                 </div>
               </div>
             </div>
@@ -376,13 +373,13 @@ export const AdaptivePacing: React.FC = () => {
                   <h3 className="text-xl font-bold font-display text-neutral-900 dark:text-white">
                     Sign Flips & Number Line Simulator
                   </h3>
-                  <p className="text-sm text-neutral-500">
+                  <p className="adhd-clamp text-sm text-neutral-500">
                     Multiplying by a negative number physically reverses vector orientation across origin 0.
                   </p>
                 </div>
                 <button
                   onClick={() => setIsFlipped(!isFlipped)}
-                  className="px-4 py-2 rounded-xl bg-[#8266F0] text-white text-xs font-semibold hover:bg-[#7052eb] flex items-center space-x-1.5 shadow-md shadow-[#8266F0]/25"
+                  className="px-4 py-2 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-strong flex items-center space-x-1.5 shadow-md shadow-brand/25"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Toggle Multiplier Sign (× -1)</span>
@@ -409,7 +406,7 @@ export const AdaptivePacing: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-2">
                     <span>Multiplier Factor:</span>
-                    <span className="font-mono text-[#8266F0] font-bold">
+                    <span className="font-mono text-brand font-bold">
                       {isFlipped ? -Math.abs(multiplier) : Math.abs(multiplier)}
                     </span>
                   </div>
@@ -419,7 +416,7 @@ export const AdaptivePacing: React.FC = () => {
                     max="5"
                     value={Math.abs(multiplier)}
                     onChange={(e) => setMultiplier(isFlipped ? -Number(e.target.value) : Number(e.target.value))}
-                    className="w-full accent-[#8266F0]"
+                    className="w-full accent-brand"
                   />
                 </div>
               </div>
@@ -469,7 +466,7 @@ export const AdaptivePacing: React.FC = () => {
                       </div>
 
                       <div className="mt-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300">
-                        ⚡ <strong>Debt Multiplier Rule:</strong> A negative sign is an <em>operator</em> that reflects across zero. When you have two negatives like <code className="font-mono font-bold">-2 × (-9)</code>, the first negative flips left, and the second negative flips it back right into positive <code className="font-mono font-bold text-emerald-600">+18</code>!
+                        <Zap className="inline w-4 h-4 -mt-0.5 mr-1" aria-hidden="true" /><strong>Debt Multiplier Rule:</strong> A negative sign is an <em>operator</em> that reflects across zero. When you have two negatives like <code className="font-mono font-bold">-2 × (-9)</code>, the first negative flips left, and the second negative flips it back right into positive <code className="font-mono font-bold text-emerald-600">+18</code>!
                       </div>
                     </div>
                   );
@@ -486,7 +483,7 @@ export const AdaptivePacing: React.FC = () => {
                   <h3 className="text-xl font-bold font-display text-neutral-900 dark:text-white">
                     Variable Balancing Scales: Maintain Equation Equilibrium
                   </h3>
-                  <p className="text-sm text-neutral-500">
+                  <p className="adhd-clamp text-sm text-neutral-500">
                     Solve <code className="font-bold text-neutral-800 dark:text-neutral-200">2x + 4 = 10</code> by applying equal operations to both pans.
                   </p>
                 </div>
@@ -514,7 +511,7 @@ export const AdaptivePacing: React.FC = () => {
                     <div className="flex flex-col items-center">
                       <div className="flex flex-wrap justify-center gap-2 mb-3 min-h-[50px] items-center">
                         {Array.from({ length: leftWeight.xCount }).map((_, i) => (
-                          <div key={`x-${i}`} className="w-10 h-10 rounded-xl bg-[#8266F0] text-white font-bold flex items-center justify-center text-sm shadow-md">
+                          <div key={`x-${i}`} className="w-10 h-10 rounded-xl bg-brand text-white font-bold flex items-center justify-center text-sm shadow-md">
                             x
                           </div>
                         ))}
@@ -554,7 +551,7 @@ export const AdaptivePacing: React.FC = () => {
                     onClick={() => handleScaleAction("subtract4")}
                     className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${
                       leftWeight.constants === 4
-                        ? "bg-[#8266F0] text-white hover:bg-[#7052eb] shadow-md shadow-[#8266F0]/25 cursor-pointer"
+                        ? "bg-brand text-white hover:bg-brand-strong shadow-md shadow-brand/25 cursor-pointer"
                         : "bg-neutral-200 dark:bg-white/10 text-neutral-400 cursor-not-allowed"
                     }`}
                   >
@@ -582,7 +579,7 @@ export const AdaptivePacing: React.FC = () => {
                   </div>
                 ) : (
                   <div className="mt-6 text-xs text-neutral-500 flex items-center space-x-1.5">
-                    <Info className="w-4 h-4 text-[#8266F0]" />
+                    <Info className="w-4 h-4 text-brand" />
                     <span>Follow the algebraic steps above to isolate the variable <code className="font-bold">x</code>.</span>
                   </div>
                 )}

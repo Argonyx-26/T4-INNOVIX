@@ -3,6 +3,7 @@ import { Course, ThemeMode, ToastMessage } from "../types";
 import { useAuth } from "./AuthContext";
 import { dataService } from "../services/dataService";
 
+const TTS_API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 const GUEST_BOOKMARKS_KEY = "eduvia_guest_course_bookmarks";
 const LEGACY_BOOKMARKS_KEY = "eduvia_bookmarks";
 const userBookmarksCacheKey = (uid: string) => `eduvia_course_bookmarks_${uid}`;
@@ -112,7 +113,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(
       `Mode Switched: ${newMode.toUpperCase()}`,
       newMode === "adhd"
-        ? "ADHD Focus Mode: Minimal cognitive load, warm cream background, high-focus styling."
+        ? "ADHD Focus Mode: warm theme with less text, so you can focus on one thing at a time."
         : newMode === "dyslexic"
         ? "Dyslexia Mode Active: OpenDyslexic weighted typography, reading ruler, and audio assists enabled."
         : "Standard Editorial Experience restored.",
@@ -158,10 +159,108 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return !wasSaved;
   };
 
-  const speak = (text: string) => {
-    if (!speechEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) {
-      return;
+  // Cartesia TTS audio ref for stop control
+  const cartesiaAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Speech request counter: a newer speak() call wins over a slower earlier one.
+  const speechSeqRef = useRef(0);
+
+  const playFromTtsProxy = async (text: string): Promise<boolean> => {
+    const seq = ++speechSeqRef.current;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 4000);
+    try {
+      const response = await fetch(`${TTS_API_BASE}/tts/speak/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+      });
+      if (!response.ok) return false;
+      const blob = await response.blob();
+      if (seq !== speechSeqRef.current) return true; // superseded; stay quiet
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.playbackRate = mode === "dyslexic" ? 0.9 : 1.0;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        if (cartesiaAudioRef.current === audio) cartesiaAudioRef.current = null;
+      };
+      cartesiaAudioRef.current = audio;
+      await audio.play();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      window.clearTimeout(timer);
     }
+  };
+
+  const speak = async (text: string) => {
+    if (!speechEnabled || typeof window === "undefined") return;
+
+    // Stop any currently playing audio first
+    stopSpeech();
+
+    // Preferred: the backend proxy, which holds the Cartesia key server-side.
+    if (await playFromTtsProxy(text)) return;
+
+    const cartesiaKey = import.meta.env.VITE_CARTESIA_API_KEY;
+
+    if (cartesiaKey) {
+      try {
+        const response = await fetch("https://api.cartesia.ai/tts/bytes", {
+          method: "POST",
+          headers: {
+            "Cartesia-Version": "2024-06-10",
+            "X-API-Key": cartesiaKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model_id: "sonic-2",
+            transcript: text,
+            voice: {
+              mode: "id",
+              id: "694f9389-aac1-45b6-b726-9d9369183238", // Warm, friendly female voice
+            },
+            output_format: {
+              container: "mp3",
+              bit_rate: 128000,
+              sample_rate: 44100,
+            },
+            language: "en",
+          }),
+        });
+
+        if (!response.ok) {
+          console.warn("[Cartesia] API response not OK:", response.status, ". Falling back to browser TTS.");
+          fallbackBrowserSpeak(text);
+          return;
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.playbackRate = mode === "dyslexic" ? 0.9 : 1.0;
+        cartesiaAudioRef.current = audio;
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          cartesiaAudioRef.current = null;
+        };
+
+        await audio.play();
+      } catch (err) {
+        console.warn("[Cartesia] TTS request failed, falling back to browser:", err);
+        fallbackBrowserSpeak(text);
+      }
+    } else {
+      fallbackBrowserSpeak(text);
+    }
+  };
+
+  const fallbackBrowserSpeak = (text: string) => {
+    if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = mode === "dyslexic" ? 0.9 : 1.0;
@@ -170,6 +269,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const stopSpeech = () => {
+    speechSeqRef.current++;
+    // Stop Cartesia audio
+    if (cartesiaAudioRef.current) {
+      cartesiaAudioRef.current.pause();
+      cartesiaAudioRef.current.currentTime = 0;
+      cartesiaAudioRef.current = null;
+    }
+    // Also stop any browser SpeechSynthesis
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }

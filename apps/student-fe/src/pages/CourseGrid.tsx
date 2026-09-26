@@ -3,6 +3,7 @@ import { Course } from "../types";
 import { dataService } from "../services/dataService";
 import { CourseCard } from "../components/CourseCard";
 import { useThemeMode } from "../context/ThemeModeContext";
+import { COURSE_FILTER_EVENT, COURSE_FILTER_KEY, CourseFilterRequest } from "../services/voiceCommands";
 import { Search, Filter, Bookmark, Sparkles, BookOpen, Layers, CheckCircle2, Loader2 } from "lucide-react";
 
 interface CourseGridProps {
@@ -11,15 +12,52 @@ interface CourseGridProps {
 
 type FilterCategory = "All" | "School (K-12)" | "Undergraduate (UG)" | "Postgraduate (PG)" | "Foundations" | "Advanced" | "Bookmarked";
 
+// A voice "filter:..." command hands its filter over through sessionStorage.
+const readPendingFilter = (): CourseFilterRequest | null => {
+  try {
+    const raw = sessionStorage.getItem(COURSE_FILTER_KEY);
+    return raw ? (JSON.parse(raw) as CourseFilterRequest) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
   const { bookmarks, savedCourses, mode } = useThemeMode();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTier, setActiveTier] = useState<string>("All");
   const [activeDiscipline, setActiveDiscipline] = useState<string>("All");
-  const [activeFilter, setActiveFilter] = useState<FilterCategory>("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [pendingFilter] = useState(readPendingFilter);
+  const [activeFilter, setActiveFilter] = useState<FilterCategory>(pendingFilter?.filter ?? "All");
+  const [searchQuery, setSearchQuery] = useState(pendingFilter?.query ?? "");
   const [riskFilter, setRiskFilter] = useState<string>("All");
+
+  // Clear the handed-over filter (outside the initialiser, which Strict Mode runs twice), and
+  // apply voice filters that arrive while this page is already open.
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(COURSE_FILTER_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+    const onVoiceFilter = (e: Event) => {
+      const req = (e as CustomEvent<CourseFilterRequest>).detail;
+      if (!req) return;
+      try {
+        sessionStorage.removeItem(COURSE_FILTER_KEY);
+      } catch {
+        /* storage unavailable */
+      }
+      setActiveTier("All");
+      setActiveDiscipline("All");
+      setRiskFilter("All");
+      setActiveFilter(req.filter);
+      setSearchQuery(req.query);
+    };
+    window.addEventListener(COURSE_FILTER_EVENT, onVoiceFilter);
+    return () => window.removeEventListener(COURSE_FILTER_EVENT, onVoiceFilter);
+  }, []);
 
   useEffect(() => {
     dataService.getCourses().then((data) => {
@@ -77,14 +115,14 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       {/* Header section */}
       <div className="mb-10 text-center max-w-3xl mx-auto">
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#8266F0]/10 text-[#8266F0] font-semibold text-xs tracking-wider uppercase mb-4 border border-[#8266F0]/20">
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-brand/10 text-brand font-semibold text-xs tracking-wider uppercase mb-4 border border-brand/20">
           <BookOpen className="w-3.5 h-3.5" />
           <span>Universal Multi-Tier Cognitive Curriculum</span>
         </div>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 font-display mb-4">
           Curriculum Explorer
         </h1>
-        <p className="text-neutral-600 dark:text-neutral-400 text-base sm:text-lg leading-relaxed">
+        <p className="adhd-hide text-neutral-600 dark:text-neutral-400 text-base sm:text-lg leading-relaxed">
           Structured conceptual progressions designed to prevent and clear misconceptions across School (K-12), Undergraduate (UG), and Postgraduate (PG) disciplines. Every course links directly with our real-time cognitive telemetry loop.
         </p>
 
@@ -99,7 +137,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
             <div className="text-xs text-neutral-500 font-medium">Diagnostic-Mapped</div>
           </div>
           <div className="p-3 bg-white dark:bg-[#1E1E24] rounded-2xl border border-black/5 dark:border-white/10 shadow-sm text-center">
-            <div className="text-2xl font-bold text-[#8266F0] font-display">3 Modes</div>
+            <div className="text-2xl font-bold text-brand font-display">3 Modes</div>
             <div className="text-xs text-neutral-500 font-medium">Neurodivergent Ready</div>
           </div>
           <div className="p-3 bg-white dark:bg-[#1E1E24] rounded-2xl border border-black/5 dark:border-white/10 shadow-sm text-center">
@@ -120,7 +158,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
               placeholder="Search by topic, prerequisite, formula, tier, or instructor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#8266F0] text-sm"
+              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand text-sm"
             />
             {searchQuery && (
               <button
@@ -137,7 +175,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
             <select
               value={activeDiscipline}
               onChange={(e) => setActiveDiscipline(e.target.value)}
-              className="px-3.5 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-800 dark:text-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+              className="px-3.5 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-800 dark:text-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="All">All Disciplines</option>
               <option value="Mathematics">Mathematics</option>
@@ -151,7 +189,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
             <select
               value={riskFilter}
               onChange={(e) => setRiskFilter(e.target.value)}
-              className="px-3.5 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-800 dark:text-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+              className="px-3.5 py-3 rounded-2xl bg-neutral-100/70 dark:bg-white/5 border border-black/5 dark:border-white/10 text-neutral-800 dark:text-neutral-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="All">All Risk Profiles</option>
               <option value="High">High Risk (Cognitive Traps)</option>
@@ -171,7 +209,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
                 onClick={() => setActiveFilter(filter)}
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 flex items-center space-x-1.5 ${
                   isSelected
-                    ? "bg-[#8266F0] text-white shadow-md shadow-[#8266F0]/25"
+                    ? "bg-brand text-white shadow-md shadow-brand/25"
                     : "bg-neutral-100 dark:bg-white/5 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-white/10"
                 }`}
               >
@@ -179,7 +217,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
                 <span>{filter}</span>
                 {filter === "Bookmarked" && bookmarks.length > 0 && (
                   <span className={`ml-1 text-[11px] px-1.5 py-0.2 rounded-full ${
-                    isSelected ? "bg-white text-[#8266F0]" : "bg-[#8266F0]/20 text-[#8266F0]"
+                    isSelected ? "bg-white text-brand" : "bg-brand/20 text-brand"
                   }`}>
                     {bookmarks.length}
                   </span>
@@ -204,7 +242,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
               setSearchQuery("");
               setRiskFilter("All");
             }}
-            className="text-xs text-[#8266F0] hover:underline font-medium"
+            className="text-xs text-brand hover:underline font-medium"
           >
             Reset all filters
           </button>
@@ -214,7 +252,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
       {/* Grid of Courses */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center space-y-3">
-          <Loader2 className="w-8 h-8 text-[#8266F0] animate-spin" />
+          <Loader2 className="w-8 h-8 text-brand animate-spin" />
           <p className="text-xs text-neutral-500 font-medium">Synchronizing curriculum from Firestore...</p>
         </div>
       ) : filteredCourses.length > 0 ? (
@@ -244,7 +282,7 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
               setSearchQuery("");
               setRiskFilter("All");
             }}
-            className="px-5 py-2.5 rounded-full bg-[#8266F0] text-white text-sm font-semibold hover:bg-[#7052eb] transition-colors"
+            className="px-5 py-2.5 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-strong transition-colors"
           >
             Reset Filters
           </button>
@@ -252,22 +290,22 @@ export const CourseGrid: React.FC<CourseGridProps> = ({ onSelectCourse }) => {
       )}
 
       {/* Bottom Educational Banner */}
-      <div className="mt-16 p-8 rounded-3xl bg-gradient-to-r from-[#8266F0]/10 via-[#EC4899]/5 to-transparent border border-[#8266F0]/20 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="mt-16 p-8 rounded-3xl bg-gradient-to-r from-brand/10 via-[#EC4899]/5 to-transparent border border-brand/20 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-[#8266F0]">
+          <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-brand">
             <Sparkles className="w-4 h-4" />
             <span>Not sure where to begin?</span>
           </div>
           <h3 className="text-xl sm:text-2xl font-bold font-display text-neutral-900 dark:text-white">
             Take the 3-minute Cognitive Baseline Diagnostic
           </h3>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-xl">
+          <p className="adhd-hide text-sm text-neutral-600 dark:text-neutral-400 max-w-xl">
             Our AI Pinpoints foundational gaps before you enroll, placing you directly into the optimal learning tier without repeating familiar material.
           </p>
         </div>
         <a
           href="#diagnostic"
-          className="whitespace-nowrap px-6 py-3.5 rounded-full bg-[#8266F0] text-white text-sm font-semibold hover:bg-[#7052eb] shadow-lg shadow-[#8266F0]/25 transition-all transform hover:-translate-y-0.5"
+          className="whitespace-nowrap px-6 py-3.5 rounded-full bg-brand text-white text-sm font-semibold hover:bg-brand-strong shadow-lg shadow-brand/25 transition-all transform hover:-translate-y-0.5"
         >
           Launch Diagnostic Loop
         </a>

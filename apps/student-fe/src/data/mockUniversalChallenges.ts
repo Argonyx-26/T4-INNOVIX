@@ -1,2 +1,201 @@
 import { ConceptChallenge } from "../types";
-export const UNIVERSAL_CHALLENGES: ConceptChallenge[] = [];
+
+// Seed challenges: used when Firestore's `challenges` collection is empty (and written there on first load).
+export const UNIVERSAL_CHALLENGES: ConceptChallenge[] = [
+  {
+    id: "math-school-linear",
+    tier: "School (K-12)",
+    discipline: "Mathematics",
+    topic: "Distributing a Negative Factor",
+    domain: "Linear Equations",
+    gradeLevel: "Class 7–8",
+    equationOrPrompt: "-3(x - 4) = 6",
+    instructions: "Solve for x.",
+    options: [
+      {
+        id: "a",
+        label: "x = 2",
+        isCorrect: true,
+        explanation: "-3x + 12 = 6 → -3x = -6 → x = 2.",
+      },
+      {
+        id: "b",
+        label: "x = -6",
+        isCorrect: false,
+        misconceptionTitle: "Sign Inversion in Distribution",
+        errorRootCause: "You multiplied -3 × -4 as -12. A negative times a negative is positive: -3 × -4 = +12.",
+        prerequisiteGap: "Integer multiplication sign rules (Class 7)",
+      },
+      {
+        id: "c",
+        label: "x = -10/3",
+        isCorrect: false,
+        misconceptionTitle: "Partial Distribution",
+        errorRootCause: "You multiplied -3 by x but not by -4, giving -3x - 4 = 6. The factor outside the brackets multiplies every term inside.",
+        prerequisiteGap: "The distributive property",
+      },
+      {
+        id: "d",
+        label: "x = -2",
+        isCorrect: false,
+        misconceptionTitle: "Division Sign Slip",
+        errorRootCause: "You reached -3x = -6 correctly, then dropped a sign when dividing. -6 ÷ -3 = +2.",
+        prerequisiteGap: "Dividing negative numbers",
+      },
+    ],
+    hints: [
+      { tier: 1, tierName: "Nudge", content: "Multiply -3 by each term inside the brackets, one at a time." },
+      { tier: 2, tierName: "Scaffold", content: "-3 × x = -3x, and -3 × -4 = ? (negative × negative)." },
+      { tier: 3, tierName: "Structural Guidance", content: "Rewrite as -3x + 12 = 6, then subtract 12 from both sides." },
+    ],
+    microLesson: {
+      title: "Debt Cancellation: Why − × − Is +",
+      ruleName: "−3 × (−4) = +12",
+      analogySummary: "Taking away 3 debts of ₹4 each leaves you ₹12 better off. Removing a negative is a gain.",
+      failurePoint: "-3(x - 4) → -3x - 12",
+      correctPath: "-3(x - 4) → -3x + 12",
+      voiceScript:
+        "When a negative number multiplies a negative number, the result is positive. Think of it as removing debts: taking away three debts of four rupees each leaves you twelve rupees better off. So negative three times negative four is positive twelve.",
+    },
+    verification: {
+      question: "-3(2y - 5) = 3",
+      options: [
+        { id: "v1", label: "y = 2", isCorrect: true, feedback: "Correct: -6y + 15 = 3 → -6y = -12 → y = 2." },
+        { id: "v2", label: "y = -2", isCorrect: false, feedback: "Check: -3(2(-2) - 5) = -3(-9) = 27, not 3. Remember -12 ÷ -6 = +2." },
+        { id: "v3", label: "y = -3", isCorrect: false, feedback: "That comes from -3 × -5 = -15. Negative × negative is positive, so it's +15." },
+        { id: "v4", label: "y = 1", isCorrect: false, feedback: "Check: -3(2(1) - 5) = -3(-3) = 9, not 3." },
+      ],
+    },
+  },
+  {
+    id: "cs-ug-binary-search",
+    tier: "Undergraduate (UG)",
+    discipline: "Computer Science",
+    topic: "Binary Search Termination",
+    domain: "Algorithms",
+    gradeLevel: "Undergraduate Year 1",
+    equationOrPrompt:
+      "lo, hi = 0, len(a) - 1\nwhile lo < hi:\n    mid = (lo + hi) // 2\n    if a[mid] < target: lo = mid\n    else: hi = mid",
+    instructions: "This search runs on a = [4, 8] with target = 8. What happens?",
+    options: [
+      {
+        id: "a",
+        label: "It never stops (infinite loop)",
+        isCorrect: true,
+        explanation: "lo = 0, hi = 1 → mid = 0; a[0] = 4 < 8 so lo = mid = 0. Nothing changes, so the loop repeats forever.",
+      },
+      {
+        id: "b",
+        label: "It returns index 1",
+        isCorrect: false,
+        misconceptionTitle: "Midpoint Progress Fallacy",
+        errorRootCause: "You assumed every iteration shrinks the range. With lo = mid, when mid == lo the range stays the same size.",
+        prerequisiteGap: "Loop invariants and termination",
+      },
+      {
+        id: "c",
+        label: "It returns index 0",
+        isCorrect: false,
+        misconceptionTitle: "Boundary Confusion",
+        errorRootCause: "lo only becomes the answer once the range collapses onto the target, and here it never collapses.",
+        prerequisiteGap: "Tracing loop state by hand",
+      },
+      {
+        id: "d",
+        label: "It raises an IndexError",
+        isCorrect: false,
+        misconceptionTitle: "Off-by-One Anxiety",
+        errorRootCause: "mid = (lo + hi) // 2 always stays within [lo, hi], so indexing is safe. The bug is termination, not bounds.",
+        prerequisiteGap: "Integer division and index ranges",
+      },
+    ],
+    hints: [
+      { tier: 1, tierName: "Nudge", content: "Trace one iteration by hand with lo = 0, hi = 1." },
+      { tier: 2, tierName: "Scaffold", content: "Compute mid, then check whether lo or hi actually changes." },
+      { tier: 3, tierName: "Structural Guidance", content: "If an iteration leaves lo and hi unchanged, what happens on the next iteration?" },
+    ],
+    microLesson: {
+      title: "Every Iteration Must Shrink the Range",
+      ruleName: "lo = mid + 1",
+      analogySummary: "Like hunting for a page in a book: if you never move past the page you just checked, you'll check it forever.",
+      failurePoint: "lo = mid → the range can stay the same size",
+      correctPath: "lo = mid + 1 → the range shrinks every step",
+      voiceScript:
+        "A binary search only terminates if every iteration makes the search range smaller. When mid equals lo, setting lo to mid changes nothing. Setting lo to mid plus one guarantees progress.",
+    },
+    verification: {
+      question: "Keeping `else: hi = mid`, which change makes the loop always terminate?",
+      options: [
+        { id: "v1", label: "lo = mid + 1", isCorrect: true, feedback: "Correct: now the range shrinks every iteration, so the loop always ends." },
+        { id: "v2", label: "while lo <= hi", isCorrect: false, feedback: "With lo = mid this loops even longer: when lo == hi the range still never shrinks." },
+        { id: "v3", label: "mid = (lo + hi + 1) // 2", isCorrect: false, feedback: "Rounding mid up fixes lo = mid, but then hi = mid can stall. Try a = [4, 8] with target 4." },
+        { id: "v4", label: "hi = mid - 1", isCorrect: false, feedback: "This can skip the target: when a[mid] == target, it moves past it." },
+      ],
+    },
+  },
+  {
+    id: "math-school-decimals",
+    tier: "School (K-12)",
+    discipline: "Mathematics",
+    topic: "Comparing Decimals",
+    domain: "Number Sense",
+    gradeLevel: "Class 6",
+    equationOrPrompt: "0.4    0.35    0.125    0.09",
+    instructions: "Which of these decimals is the greatest?",
+    options: [
+      {
+        id: "a",
+        label: "0.4",
+        isCorrect: true,
+        explanation: "0.4 = 0.400, which is bigger than 0.350, 0.125 and 0.090.",
+      },
+      {
+        id: "b",
+        label: "0.125",
+        isCorrect: false,
+        misconceptionTitle: "Longer Is Larger",
+        errorRootCause: "More digits doesn't mean bigger. Compare place by place: 0.125 has 1 tenth, while 0.4 has 4 tenths.",
+        prerequisiteGap: "Decimal place value",
+      },
+      {
+        id: "c",
+        label: "0.35",
+        isCorrect: false,
+        misconceptionTitle: "Whole-Number Comparison",
+        errorRootCause: "You compared 35 with 4 as whole numbers. Line them up instead: 0.35 vs 0.40, and 40 hundredths > 35 hundredths.",
+        prerequisiteGap: "Equivalent decimals (0.4 = 0.40)",
+      },
+      {
+        id: "d",
+        label: "0.09",
+        isCorrect: false,
+        misconceptionTitle: "Zero Placeholder Confusion",
+        errorRootCause: "The 0 in 0.09 means zero tenths, so 0.09 is less than one tenth.",
+        prerequisiteGap: "Decimal place value",
+      },
+    ],
+    hints: [
+      { tier: 1, tierName: "Nudge", content: "Compare the tenths digit first." },
+      { tier: 2, tierName: "Scaffold", content: "Pad with zeros so every number has three decimal places." },
+      { tier: 3, tierName: "Structural Guidance", content: "0.400, 0.350, 0.125, 0.090: which is largest?" },
+    ],
+    microLesson: {
+      title: "Line Up the Places",
+      ruleName: "0.4 = 0.400",
+      analogySummary: "Think in money: ₹0.40 is 40 paise and ₹0.35 is 35 paise. Extra digits don't add value on their own.",
+      failurePoint: "0.125 > 0.4 because it has more digits",
+      correctPath: "0.400 > 0.125: compare tenths first",
+      voiceScript:
+        "To compare decimals, line up the decimal points and compare the tenths first. Zero point four is four tenths, which is more than one tenth, so it is bigger than zero point one two five.",
+    },
+    verification: {
+      question: "Which is the smallest?   0.6   0.55   0.555   0.06",
+      options: [
+        { id: "v1", label: "0.06", isCorrect: true, feedback: "Correct: 0.06 has zero tenths, so it's the smallest." },
+        { id: "v2", label: "0.555", isCorrect: false, feedback: "More digits doesn't make it smaller either: 0.555 has 5 tenths." },
+        { id: "v3", label: "0.55", isCorrect: false, feedback: "0.55 has 5 tenths; 0.06 has 0 tenths, so 0.06 is smaller." },
+        { id: "v4", label: "0.6", isCorrect: false, feedback: "0.6 = 0.600, which is actually the largest here." },
+      ],
+    },
+  },
+];

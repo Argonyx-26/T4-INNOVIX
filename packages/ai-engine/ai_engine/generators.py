@@ -10,6 +10,7 @@ All enforcing native JSON output with robust offline fallback dictionaries.
 """
 import os
 import json
+from urllib.parse import quote
 from typing import Dict, Any, List
 import google.generativeai as genai
 
@@ -185,44 +186,68 @@ def generate_verification_question(concept: str, resolved_misconception: str) ->
 def generate_library_resources(query: str) -> List[Dict[str, Any]]:
     """
     Generates a list of educational resources for a given topic using Gemini.
-    Gracefully falls back to hardcoded resources on API failures.
+    Gracefully falls back to high-quality global OER resources on API failures.
     """
+    clean_query = query.strip()
+    encoded_q = quote(clean_query)
+    title_case = clean_query.title()
+
     fallback_resources = [
         {
-            "id": f"fb-1-{query.replace(' ', '-')}",
-            "title": f"Introduction to {query.title()}",
+            "id": f"global-yt-{clean_query.lower().replace(' ', '-')}",
+            "title": f"{title_case} - Open Video Course & Lecture Series",
             "type": "video",
-            "discipline": "General Sciences",
-            "tier": "School (K-12)",
-            "source": "Khan Academy",
-            "durationOrPages": "10 mins",
-            "url": f"https://www.khanacademy.org/search?page_search_query={query}",
-            "summary": "A comprehensive introductory video breaking down the core concepts.",
-            "matchedMisconception": "Foundational gaps"
-        },
-        {
-            "id": f"fb-2-{query.replace(' ', '-')}",
-            "title": f"Advanced Concepts in {query.title()}",
-            "type": "paper",
-            "discipline": "General Sciences",
+            "discipline": "Computer Science",
             "tier": "Undergraduate (UG)",
-            "source": "Coursera",
-            "durationOrPages": "4 weeks",
-            "url": f"https://www.coursera.org/search?query={query}",
-            "summary": "Deep dive into academic theories and practical applications.",
-            "matchedMisconception": "Advanced application errors"
+            "source": "YouTube Open Courseware",
+            "durationOrPages": "15-45 mins / lecture",
+            "url": f"https://www.youtube.com/results?search_query={encoded_q}+lecture+course",
+            "summary": f"Curated open video lectures and visual walk-throughs exploring core concepts, proofs, and practical examples of {title_case}.",
+            "matchedMisconception": f"Visual & conceptual gaps in understanding {title_case}",
+            "rating": 4.9,
+            "isGlobal": True
         },
         {
-            "id": f"fb-3-{query.replace(' ', '-')}",
-            "title": f"{query.title()} Crash Course",
-            "type": "video",
-            "discipline": "General Sciences",
-            "tier": "School (K-12)",
-            "source": "YouTube",
-            "durationOrPages": "15 mins",
-            "url": f"https://www.youtube.com/results?search_query=Crash+Course+{query}",
-            "summary": "Fast-paced visual explanation of the topic.",
-            "matchedMisconception": "Conceptual mapping"
+            "id": f"global-arxiv-{clean_query.lower().replace(' ', '-')}",
+            "title": f"{title_case} - Peer-Reviewed Academic Research Papers",
+            "type": "paper",
+            "discipline": "Natural Sciences",
+            "tier": "Postgraduate (PG)",
+            "source": "arXiv Open Access Repository",
+            "durationOrPages": "12-30 pages",
+            "url": f"https://arxiv.org/search/?query={encoded_q}&searchtype=all",
+            "summary": f"Open-access preprints, academic surveys, and foundational mathematical literature on {title_case}.",
+            "matchedMisconception": f"Advanced theoretical and mathematical rigour for {title_case}",
+            "rating": 4.8,
+            "isGlobal": True
+        },
+        {
+            "id": f"global-wiki-{clean_query.lower().replace(' ', '-')}",
+            "title": f"{title_case} - Open Educational Wiki & Reference Manual",
+            "type": "cheatsheet",
+            "discipline": "Mathematics",
+            "tier": "Undergraduate (UG)",
+            "source": "Wikipedia & OpenStax",
+            "durationOrPages": "Open Reference",
+            "url": f"https://en.wikipedia.org/wiki/Special:Search?search={encoded_q}",
+            "summary": f"Structured open-source encyclopedia definitions, formula reference sheets, and historical background for {title_case}.",
+            "matchedMisconception": f"Definitional and formulaic confusion regarding {title_case}",
+            "rating": 4.7,
+            "isGlobal": True
+        },
+        {
+            "id": f"global-gh-{clean_query.lower().replace(' ', '-')}",
+            "title": f"{title_case} - Open Source Interactive Code & Sandboxes",
+            "type": "simulation",
+            "discipline": "Computer Science",
+            "tier": "Undergraduate (UG)",
+            "source": "GitHub Open Source",
+            "durationOrPages": "Interactive Repository",
+            "url": f"https://github.com/search?q={encoded_q}",
+            "summary": f"Public repositories, runnable code demos, algorithm visualizations, and community implementations for {title_case}.",
+            "matchedMisconception": f"Implementation & algorithmic execution gaps for {title_case}",
+            "rating": 4.9,
+            "isGlobal": True
         }
     ]
 

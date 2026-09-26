@@ -433,3 +433,83 @@ class LibrarySearchView(APIView):
         return Response(resources, status=status.HTTP_200_OK)
 
 
+class CartesiaTTSProxyView(APIView):
+    """
+    Proxies text-to-speech requests to the Cartesia Sonic API.
+    Keeps the API key secure on the server side and avoids browser CORS issues.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        import requests as http_requests
+
+        text = request.data.get("text", "").strip()
+        if not text:
+            return Response(
+                {"error": "No text provided"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cartesia_key = os.environ.get("CARTESIA_API_KEY", "")
+        if not cartesia_key:
+            return Response(
+                {"error": "Cartesia API key not configured on the server"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            cartesia_response = http_requests.post(
+                "https://api.cartesia.ai/tts/bytes",
+                headers={
+                    "Cartesia-Version": "2024-06-10",
+                    "X-API-Key": cartesia_key,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model_id": "sonic-2",
+                    "transcript": text,
+                    "voice": {
+                        "mode": "id",
+                        "id": "694f9389-aac1-45b6-b726-9d9369183238",
+                    },
+                    "output_format": {
+                        "container": "mp3",
+                        "bit_rate": 128000,
+                        "sample_rate": 44100,
+                    },
+                    "language": "en",
+                },
+                timeout=15,
+            )
+
+            if cartesia_response.status_code != 200:
+                logger.warning(
+                    "Cartesia API error %s: %s",
+                    cartesia_response.status_code,
+                    cartesia_response.text[:200],
+                )
+                return Response(
+                    {"error": f"Cartesia API returned {cartesia_response.status_code}"},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+
+            from django.http import HttpResponse
+            response = HttpResponse(
+                cartesia_response.content,
+                content_type="audio/mpeg",
+            )
+            response["Content-Length"] = len(cartesia_response.content)
+            response["Cache-Control"] = "no-cache"
+            return response
+
+        except http_requests.exceptions.Timeout:
+            return Response(
+                {"error": "Cartesia API request timed out"},
+                status=status.HTTP_504_GATEWAY_TIMEOUT,
+            )
+        except Exception as e:
+            logger.exception("Cartesia TTS proxy error: %s", e)
+            return Response(
+                {"error": "Internal TTS error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

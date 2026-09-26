@@ -14,7 +14,8 @@ import {
   doc, 
   updateDoc, 
   query, 
-  where
+  where,
+  writeBatch
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { 
@@ -27,6 +28,7 @@ import {
   RemedialPod,
   MisconceptionStatus 
 } from "../types";
+import type { TestAnalysis } from "./tutorService";
 import { MOCK_COURSES } from "../data/mockCourses";
 import { MOCK_EDUCATIONAL_RESOURCES } from "../data/mockResources";
 import { MOCK_INSTRUCTORS } from "../data/mockInstructors";
@@ -45,6 +47,85 @@ const dbTimeout = <T,>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
       setTimeout(() => reject(new Error(`Database query timed out after ${timeoutMs}ms`)), timeoutMs)
     ),
   ]);
+};
+
+// A misconception pattern seen this many times across AI tests is flagged for teachers.
+export const REPEAT_THRESHOLD = 3;
+
+export interface AiMisconceptionRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  source: "ai-test";
+  conceptId: string;
+  conceptName: string;
+  discipline: string;
+  identifiedMisconception: string;
+  misconceptionKey: string;
+  explanation: string;
+  status: MisconceptionStatus;
+  firstDetected: string;
+  lastAttempt: string;
+  attemptCount: number;
+  flagged: boolean;
+  remedialInterventionTitle: string;
+  resolutionTimestamp: string;
+  practiceStreak?: number;
+  resolvedCount?: number;
+  origin?: string;
+}
+
+export interface AiTestAttempt {
+  id: string;
+  studentId: string;
+  studentName: string;
+  topic: string;
+  difficulty: string;
+  discipline: string;
+  score: number;
+  total: number;
+  misconceptions: { key: string; title: string; count: number }[];
+  createdAt: string;
+  provider: string | null;
+}
+
+export interface LearnerModelState {
+  mastery: number;
+  confidence: number;
+  retention: number;
+  misconceptionActive: boolean;
+  lastEvent: string;
+  updatedAt: string;
+}
+
+export interface DayActivity {
+  day: string;
+  practice: number;
+  lessons: number;
+  review: number;
+  planning: number;
+}
+
+export interface WeeklyActivity {
+  thisWeek: DayActivity[];
+  lastWeek: DayActivity[];
+  isSample: boolean;
+}
+
+const day = (d: string, practice: number, lessons: number, review: number, planning: number): DayActivity => ({
+  day: d, practice, lessons, review, planning,
+});
+
+const SAMPLE_WEEKLY_ACTIVITY: WeeklyActivity = {
+  thisWeek: [
+    day("Mon", 20, 15, 10, 5), day("Tue", 15, 20, 5, 5), day("Wed", 10, 10, 10, 5),
+    day("Thu", 25, 15, 15, 5), day("Fri", 15, 10, 15, 5), day("Sat", 20, 20, 10, 5), day("Sun", 25, 25, 15, 10),
+  ],
+  lastWeek: [
+    day("Mon", 10, 10, 5, 5), day("Tue", 15, 10, 10, 5), day("Wed", 20, 15, 5, 5),
+    day("Thu", 10, 10, 10, 5), day("Fri", 5, 15, 5, 5), day("Sat", 15, 10, 10, 5), day("Sun", 20, 15, 10, 5),
+  ],
+  isSample: true,
 };
 
 // In-memory cache to guarantee sub-millisecond response times
@@ -129,112 +210,265 @@ export const dataService = {
   },
 
   async searchUniversalLibrary(query: string): Promise<EducationalResource[]> {
-    if (!query.trim()) return [];
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return this.getResources();
 
+    let backendResults: EducationalResource[] = [];
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
       const response = await fetch(`${baseUrl}/library/search/?q=${encodeURIComponent(query)}`);
 
-      if (!response.ok) {
-        console.warn(`[DataService] Backend API Error: ${response.status}. Falling back to local deterministic results.`);
-        return [
-          {
-            id: `local-1-${query.replace(/\s+/g, '-')}`,
-            title: `Introduction to ${query}`,
-            type: "video",
-            discipline: "Computer Science",
-            tier: "Undergraduate (UG)",
-            source: "YouTube",
-            durationOrPages: "15 mins",
-            url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-            summary: "A foundational video tutorial on the requested topic.",
-            matchedMisconception: "Conceptual overview",
-            rating: 4.8
-          },
-          {
-            id: `local-2-${query.replace(/\s+/g, '-')}`,
-            title: `Interactive Explorer: ${query}`,
-            type: "simulation",
-            discipline: "Computer Science",
-            tier: "Undergraduate (UG)",
-            source: "PhET / CodePen",
-            durationOrPages: "Interactive",
-            url: `https://codepen.io/search/pens?q=${encodeURIComponent(query)}`,
-            summary: "A hands-on interactive environment to test the concepts.",
-            matchedMisconception: "Practical application",
-            rating: 4.9
-          },
-          {
-            id: `local-3-${query.replace(/\s+/g, '-')}`,
-            title: `Academic Review: ${query}`,
-            type: "paper",
-            discipline: "Computer Science",
-            tier: "Postgraduate (PG)",
-            source: "arXiv",
-            durationOrPages: "8 pages",
-            url: `https://arxiv.org/search/?query=${encodeURIComponent(query)}&searchtype=all`,
-            summary: "A peer-reviewed paper detailing advanced methodologies.",
-            matchedMisconception: "Theoretical depth",
-            rating: 4.5
-          },
-          {
-            id: `local-4-${query.replace(/\s+/g, '-')}`,
-            title: `${query} Quick Reference`,
-            type: "cheatsheet",
-            discipline: "Computer Science",
-            tier: "School (K-12)",
-            source: "DevDocs",
-            durationOrPages: "2 pages",
-            url: `https://devdocs.io/search?q=${encodeURIComponent(query)}`,
-            summary: "A quick cheatsheet for common syntax and definitions.",
-            matchedMisconception: "Syntax memorization",
-            rating: 4.7
-          }
-        ];
+      if (response.ok) {
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : data.resources || [];
+        if (list.length > 0) {
+          backendResults = list.map((item: any) => ({
+            ...item,
+            isGlobal: true
+          }));
+        }
       }
-
-      const data = await response.json();
-      const list = Array.isArray(data) ? data : data.resources || [];
-      return list as EducationalResource[];
     } catch (err) {
-      console.warn("[DataService] Backend Universal Search failed, returning empty array:", err);
-      return [];
+      console.warn("[DataService] Backend Universal Search API unavailable, running hybrid client semantic + global search:", err);
     }
+
+    // 1. Genuine multi-field search against internal library dataset
+    const allResources = await this.getResources();
+    const queryTokens = trimmed.split(/\s+/).filter(Boolean);
+
+    const internalMatches = allResources.filter((res) => {
+      const fullText = [
+        res.title,
+        res.summary,
+        res.discipline,
+        res.tier,
+        res.source,
+        res.matchedMisconception,
+        res.type
+      ].join(" ").toLowerCase();
+
+      return queryTokens.every(token => fullText.includes(token));
+    });
+
+    // 2. Generate dynamic Global Open Web Resources for the search topic
+    const titleCase = trimmed.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    const encodedQuery = encodeURIComponent(trimmed);
+
+    const dynamicGlobalResources: EducationalResource[] = [
+      {
+        id: `global-yt-${trimmed.replace(/\s+/g, "-")}`,
+        title: `${titleCase} - Open Video Course & Lecture Series`,
+        source: "YouTube Open Courseware",
+        type: "video",
+        url: `https://www.youtube.com/results?search_query=${encodedQuery}+course+lecture`,
+        summary: `Curated open video lectures, visual walk-throughs, and step-by-step breakdowns exploring core concepts of ${titleCase}.`,
+        tier: "Undergraduate (UG)",
+        discipline: "Computer Science",
+        matchedMisconception: `Global Open Resource: Visual & conceptual video walkthrough for ${titleCase}`,
+        durationOrPages: "15-45 mins / lecture",
+        rating: 4.9,
+        isGlobal: true,
+      },
+      {
+        id: `global-arxiv-${trimmed.replace(/\s+/g, "-")}`,
+        title: `${titleCase} - Peer-Reviewed Academic Research Papers`,
+        source: "arXiv Open Access",
+        type: "paper",
+        url: `https://arxiv.org/search/?query=${encodedQuery}&searchtype=all`,
+        summary: `Open-access preprints, literature reviews, and foundational mathematical literature covering ${titleCase}.`,
+        tier: "Postgraduate (PG)",
+        discipline: "Natural Sciences",
+        matchedMisconception: `Global Open Resource: Formal theoretical rigour & peer-reviewed research for ${titleCase}`,
+        durationOrPages: "12-30 pages",
+        rating: 4.8,
+        isGlobal: true,
+      },
+      {
+        id: `global-wiki-${trimmed.replace(/\s+/g, "-")}`,
+        title: `${titleCase} - Open Educational Wiki & Reference Manual`,
+        source: "Wikipedia & OpenStax",
+        type: "cheatsheet",
+        url: `https://en.wikipedia.org/wiki/Special:Search?search=${encodedQuery}`,
+        summary: `Comprehensive open encyclopedia definitions, formula reference sheets, and historical background for ${titleCase}.`,
+        tier: "Undergraduate (UG)",
+        discipline: "Mathematics",
+        matchedMisconception: `Global Open Resource: Core definitions & quick formula lookup for ${titleCase}`,
+        durationOrPages: "Open Reference",
+        rating: 4.7,
+        isGlobal: true,
+      },
+      {
+        id: `global-gh-${trimmed.replace(/\s+/g, "-")}`,
+        title: `${titleCase} - Interactive Code Sandboxes & Repositories`,
+        source: "GitHub Open Source",
+        type: "simulation",
+        url: `https://github.com/search?q=${encodedQuery}`,
+        summary: `Public repositories, runnable code demos, algorithm visualizers, and open-source implementations of ${titleCase}.`,
+        tier: "Undergraduate (UG)",
+        discipline: "Computer Science",
+        matchedMisconception: `Global Open Resource: Hands-on code execution & interactive sandboxes for ${titleCase}`,
+        durationOrPages: "Interactive Repository",
+        rating: 4.9,
+        isGlobal: true,
+      },
+      {
+        id: `global-mit-${trimmed.replace(/\s+/g, "-")}`,
+        title: `${titleCase} - MIT OpenCourseWare Syllabus & Notes`,
+        source: "MIT OpenCourseWare",
+        type: "cheatsheet",
+        url: `https://ocw.mit.edu/search/?q=${encodedQuery}`,
+        summary: `Free undergraduate lecture notes, syllabus frameworks, and problem sets from MIT OCW for ${titleCase}.`,
+        tier: "Undergraduate (UG)",
+        discipline: "Natural Sciences",
+        matchedMisconception: `Global Open Resource: University level curriculum mapping & problem sets for ${titleCase}`,
+        durationOrPages: "Course Syllabus",
+        rating: 4.9,
+        isGlobal: true,
+      }
+    ];
+
+    // Combine backend results if any, internal matches, and dynamic global resources
+    const combined = [...backendResults, ...internalMatches];
+    const existingIds = new Set(combined.map(r => r.id));
+
+    const uniqueGlobals = dynamicGlobalResources.filter(r => !existingIds.has(r.id));
+    return [...combined, ...uniqueGlobals];
   },
 
   // =========================================================================
-  // 3. INSTRUCTORS DIRECTORY
+  // 3. INSTRUCTORS & REGISTERED TEACHERS DIRECTORY
   // =========================================================================
   async getInstructors(): Promise<Instructor[]> {
     if (cachedInstructors && cachedInstructors.length > 0) {
       return cachedInstructors;
     }
 
+    let combined: Instructor[] = [...MOCK_INSTRUCTORS];
+
     try {
+      // 1. Fetch from 'instructors' collection
       const colRef = collection(db, "instructors");
-      const snapshot = await dbTimeout(getDocs(colRef));
+      const snapshot = await dbTimeout(getDocs(colRef), 4000);
 
       if (!snapshot.empty) {
         const liveInstructors: Instructor[] = snapshot.docs.map((docSnap) => ({
           id: docSnap.id,
+          isRegistered: true,
           ...(docSnap.data() as Omit<Instructor, "id">),
         }));
-        cachedInstructors = liveInstructors;
-        return liveInstructors;
+        
+        // Merge into combined without duplicate IDs
+        liveInstructors.forEach((inst) => {
+          const idx = combined.findIndex((item) => item.id === inst.id || (inst.email && item.email === inst.email));
+          if (idx >= 0) {
+            combined[idx] = { ...combined[idx], ...inst, isRegistered: true };
+          } else {
+            combined.push(inst);
+          }
+        });
       }
 
-      // Auto-seed instructors in background
-      for (const inst of MOCK_INSTRUCTORS) {
-        dbTimeout(setDoc(doc(db, "instructors", inst.id), inst)).catch(() => {});
+      // 2. Fetch registered teachers from 'users' collection where role == 'teacher'
+      try {
+        const teacherUsersQuery = query(collection(db, "users"), where("role", "==", "teacher"));
+        const teacherUsersSnap = await dbTimeout(getDocs(teacherUsersQuery), 4000);
+        
+        if (!teacherUsersSnap.empty) {
+          teacherUsersSnap.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            const teacherInst: Instructor = {
+              id: docSnap.id,
+              name: data.displayName || "Registered Educator",
+              credentials: data.institution ? `Faculty at ${data.institution}` : "Verified Platform Educator",
+              role: data.department ? `${data.department} Faculty` : "Cognitive Science Mentor",
+              discipline: (data.department as any) || "Mathematics",
+              institution: data.institution || "Platform Registered",
+              email: data.email || "",
+              isRegistered: true,
+              specialization: data.department ? [data.department, "Concept Clearing", "1-on-1 Mentorship"] : ["Mathematics", "Concept Clearing"],
+              bio: `Platform registered teacher dedicated to personalized concept mastery and student success.`,
+              rating: 4.9,
+              studentsTaught: 120,
+              avatar: data.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.displayName || docSnap.id)}`,
+              availableHours: "Available for booking",
+            };
+
+            const idx = combined.findIndex((item) => item.id === teacherInst.id || (teacherInst.email && item.email === teacherInst.email));
+            if (idx >= 0) {
+              combined[idx] = { ...combined[idx], ...teacherInst };
+            } else {
+              combined.unshift(teacherInst);
+            }
+          });
+        }
+      } catch (userErr) {
+        console.warn("[DataService] Registered teacher users fetch skipped:", userErr);
       }
 
-      cachedInstructors = MOCK_INSTRUCTORS;
-      return MOCK_INSTRUCTORS;
+      cachedInstructors = combined;
+      return combined;
     } catch (err) {
       console.warn("[DataService] Firestore getInstructors fallback:", err);
-      cachedInstructors = MOCK_INSTRUCTORS;
-      return MOCK_INSTRUCTORS;
+      cachedInstructors = combined;
+      return combined;
     }
+  },
+
+  async getInstructorsMatchingInterests(
+    studentProfile?: any,
+    misconceptions: AiMisconceptionRecord[] = []
+  ): Promise<Instructor[]> {
+    const allTeachers = await this.getInstructors();
+
+    const studentTier = studentProfile?.academicTier || "Undergraduate (UG)";
+    const studentDept = studentProfile?.department || "Mathematics";
+    
+    // Check if student has active math/calculus/CS misconceptions
+    const misconceptionTopics = misconceptions.map(m => (m.conceptName || m.identifiedMisconception || "").toLowerCase());
+    
+    return allTeachers.map((teacher) => {
+      let matchScore = 85;
+      let reasons: string[] = [];
+
+      // Discipline/Department fit
+      if (teacher.discipline === studentDept || teacher.specialization.some(s => s.toLowerCase().includes(studentDept.toLowerCase()))) {
+        matchScore += 8;
+        reasons.push(`Direct match for your active discipline (${studentDept})`);
+      }
+
+      // Misconception topic fit
+      const matchingMisconception = misconceptionTopics.find(topic => 
+        teacher.specialization.some(spec => topic.includes(spec.toLowerCase()) || spec.toLowerCase().includes(topic))
+      );
+
+      if (matchingMisconception) {
+        matchScore += 10;
+        reasons.push(`Specialist for your active misconception area`);
+      }
+
+      // High rating / verified registered status
+      if (teacher.isRegistered) {
+        matchScore += 4;
+        reasons.push(`Verified registered platform teacher`);
+      }
+
+      if (teacher.rating >= 4.95) {
+        matchScore += 3;
+        reasons.push(`Top rated student approval (${teacher.rating}/5.0)`);
+      }
+
+      // Cap matchScore at 99
+      const finalScore = Math.min(99, teacher.matchScore || matchScore);
+      const fitReason = reasons.length > 0 
+        ? reasons.join(" • ") 
+        : teacher.fitReason || `Fits system interest for ${studentTier} ${teacher.discipline || "Curriculum"}`;
+
+      return {
+        ...teacher,
+        matchScore: finalScore,
+        fitReason
+      };
+    }).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
   },
 
   // =========================================================================
@@ -510,7 +744,125 @@ export const dataService = {
   },
 
   // =========================================================================
-  // 10. COMPLETE DATABASE SEEDING UTILITY
+  // 10. DASHBOARD PREFERENCES & ACTIVITY
+  // =========================================================================
+  async getDashboardFavorites(uid: string): Promise<string[]> {
+    const snap = await dbTimeout(getDoc(doc(db, "users", uid, "data", "dashboard_prefs")));
+    return snap.exists() ? ((snap.data().favorites as string[]) || []) : [];
+  },
+
+  async saveDashboardFavorites(uid: string, favorites: string[]): Promise<void> {
+    await dbTimeout(
+      setDoc(
+        doc(db, "users", uid, "data", "dashboard_prefs"),
+        { favorites, updatedAt: new Date().toISOString() },
+        { merge: true }
+      )
+    );
+  },
+
+  // No activity tracking writes this document yet, so a missing document yields
+  // sample data flagged with isSample for the UI to label.
+  async getWeeklyActivity(uid: string): Promise<WeeklyActivity> {
+    try {
+      const snap = await dbTimeout(getDoc(doc(db, "users", uid, "data", "weekly_activity")));
+      if (snap.exists()) {
+        const data = snap.data() as Omit<WeeklyActivity, "isSample">;
+        if (Array.isArray(data.thisWeek) && Array.isArray(data.lastWeek)) {
+          return { ...data, isSample: false };
+        }
+      }
+    } catch (err) {
+      console.warn("[DataService] Weekly activity fallback:", err);
+    }
+    return SAMPLE_WEEKLY_ACTIVITY;
+  },
+
+  // =========================================================================
+  // 11. LEARNER MODEL & MISCONCEPTION MEMORY
+  // =========================================================================
+  async getLearnerModel(uid: string): Promise<Record<string, LearnerModelState>> {
+    const snap = await dbTimeout(getDoc(doc(db, "users", uid, "data", "learner_model")));
+    return snap.exists() ? ((snap.data().concepts as Record<string, LearnerModelState>) || {}) : {};
+  },
+
+  async saveLearnerModel(uid: string, conceptId: string, state: LearnerModelState): Promise<void> {
+    await dbTimeout(
+      setDoc(doc(db, "users", uid, "data", "learner_model"), { concepts: { [conceptId]: state } }, { merge: true })
+    );
+  },
+
+  async recordMisconception(uid: string, record: StudentMisconceptionRecord): Promise<void> {
+    const clean = JSON.parse(JSON.stringify(record));
+    await dbTimeout(setDoc(doc(db, "misconceptions", record.id), { ...clean, studentId: uid }, { merge: true }));
+  },
+
+  // =========================================================================
+  // 12. AI TUTOR TESTS
+  // =========================================================================
+  async getAiMisconceptions(uid: string): Promise<AiMisconceptionRecord[]> {
+    const q = query(collection(db, "misconceptions"), where("studentId", "==", uid), where("source", "==", "ai-test"));
+    const snapshot = await dbTimeout(getDocs(q));
+    return snapshot.docs.map((d) => ({ ...(d.data() as AiMisconceptionRecord), id: d.id }));
+  },
+
+  // Saves one finished test: bumps each misconception's running count and logs the attempt, atomically.
+  async recordAiTestResult(
+    uid: string,
+    studentName: string,
+    result: TestAnalysis,
+    previous: AiMisconceptionRecord[]
+  ): Promise<AiMisconceptionRecord[]> {
+    const now = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const batch = writeBatch(db);
+    const updated = result.misconceptions.map((m) => {
+      const id = `${uid}__ai__${m.key}`;
+      const prev = previous.find((p) => p.id === id);
+      const attemptCount = (prev?.attemptCount || 0) + m.count;
+      const record: AiMisconceptionRecord = {
+        id,
+        studentId: uid,
+        studentName,
+        source: "ai-test",
+        conceptId: `ai:${result.topic.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        conceptName: result.topic,
+        discipline: result.discipline,
+        identifiedMisconception: m.title,
+        misconceptionKey: m.key,
+        explanation: m.explanation,
+        // A fresh mistake re-opens a resolved misconception and restarts its practice streak.
+        status: "Detected",
+        firstDetected: prev?.firstDetected || now,
+        lastAttempt: now,
+        attemptCount,
+        flagged: attemptCount >= REPEAT_THRESHOLD,
+        remedialInterventionTitle: `AI tutor review: ${m.title}`,
+        resolutionTimestamp: "",
+        practiceStreak: 0,
+        resolvedCount: prev?.resolvedCount || 0,
+        origin: prev?.origin || "mcq-test",
+      };
+      batch.set(doc(db, "misconceptions", id), record, { merge: true });
+      return record;
+    });
+    batch.set(doc(collection(db, "ai_test_attempts")), {
+      studentId: uid,
+      studentName,
+      topic: result.topic,
+      difficulty: result.difficulty,
+      discipline: result.discipline,
+      score: result.score,
+      total: result.total,
+      misconceptions: result.misconceptions.map(({ key, title, count }) => ({ key, title, count })),
+      createdAt: new Date().toISOString(),
+      provider: result.provider,
+    });
+    await dbTimeout(batch.commit());
+    return updated;
+  },
+
+  // =========================================================================
+  // 13. COMPLETE DATABASE SEEDING UTILITY
   // =========================================================================
   async seedAllCollections(): Promise<void> {
     console.log("[DataService] Seeding all application collections to Firestore...");

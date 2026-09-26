@@ -4,7 +4,7 @@ import { useThemeMode } from "../context/ThemeModeContext";
 export const ReadingRuler: React.FC = () => {
   const { mode } = useThemeMode();
   const [mouseY, setMouseY] = useState<number | null>(null);
-  const [enabled, setEnabled] = useState(true);
+  const [enabled] = useState(true);
 
   useEffect(() => {
     if (mode !== "dyslexic") return;
@@ -25,17 +25,19 @@ export const ReadingRuler: React.FC = () => {
     <div
       className="pointer-events-none fixed left-0 right-0 z-35 transition-all duration-75"
       style={{
-        top: `${mouseY - 24}px`,
-        height: "48px",
+        top: `${mouseY - 34}px`,
+        height: "68px",
       }}
     >
       <div
-        className="w-full h-full border-y border-amber-400/40"
+        className="w-full h-full border-y border-amber-400/50"
         style={{
-          backgroundColor: "rgba(254, 240, 138, 0.22)",
+          backgroundColor: "rgba(254, 240, 138, 0.25)",
           backdropFilter: "contrast(105%)",
         }}
       />
     </div>
   );
 };
+
+

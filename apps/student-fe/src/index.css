@@ -4,25 +4,41 @@
 @tailwind utilities;
 
 @layer base {
+  /* Theme tokens as "R G B" channels, used by the Tailwind colours in tailwind.config.js.
+     Standard values are the original Eduvia colours. */
   :root {
     --bg-canvas: #EFEFEE;
-    --text-primary: #141414;
-    --text-muted: #6B6B6B;
-    --accent-violet: #8266F0;
-    --accent-pink: #EC4899;
-    --surface-card: #FFFFFF;
-    --border-color: rgba(20, 20, 20, 0.08);
+    --c-canvas: 251 249 247;       /* #FBF9F7 */
+    --c-sidebar: 247 242 236;      /* #F7F2EC */
+    --c-fill: 244 241 238;         /* #F4F1EE */
+    --c-fill-2: 237 237 236;       /* #EDEDEC */
+    --c-fill-hover: 226 226 224;   /* #E2E2E0 */
+    --c-brand: 130 102 240;        /* #8266F0 */
+    --c-brand-strong: 107 79 216;  /* #6B4FD8 */
+    --c-brand-ink: 91 63 208;      /* #5B3FD0 */
+    --c-brand-soft: 238 232 253;   /* #EEE8FD */
+    --c-brand-faint: 247 245 255;  /* #F7F5FF */
+    --c-nav: 212 245 233;          /* #D4F5E9 */
+    --c-nav-ink: 11 143 94;        /* #0B8F5E */
+    --c-surface: 255 255 255;      /* #FFFFFF */
   }
 
-  /* ADHD Focus Mode Variables */
+  /* ADHD Focus mode: warm Apricot & Terracotta. Every text/background pair meets WCAG AA (4.5:1). */
   body.mode-adhd {
-    --bg-canvas: #FBF2E4;
-    --text-primary: #1C1917;
-    --text-muted: #57534E;
-    --accent-violet: #1F5C52; /* Calming Teal */
-    --accent-pink: #F1645C;   /* Coral */
-    --surface-card: #FFFFFF;
-    --border-color: rgba(31, 92, 82, 0.15);
+    --bg-canvas: #FCE9D8;
+    --c-canvas: 252 233 216;       /* #FCE9D8 apricot */
+    --c-sidebar: 246 217 191;      /* #F6D9BF */
+    --c-fill: 248 225 204;         /* #F8E1CC */
+    --c-fill-2: 243 213 186;       /* #F3D5BA */
+    --c-fill-hover: 237 199 166;   /* #EDC7A6 */
+    --c-brand: 168 67 46;          /* #A8432E terracotta */
+    --c-brand-strong: 138 53 36;   /* #8A3524 */
+    --c-brand-ink: 122 46 29;      /* #7A2E1D */
+    --c-brand-soft: 251 224 212;   /* #FBE0D4 blush */
+    --c-brand-faint: 253 237 228;  /* #FDEDE4 */
+    --c-nav: 251 224 212;          /* #FBE0D4 */
+    --c-nav-ink: 138 53 36;        /* #8A3524 */
+    --c-surface: 255 246 236;      /* #FFF6EC cream */
     background-color: var(--bg-canvas) !important;
   }
 
@@ -69,6 +85,31 @@
   h1, h2, h3, .font-display {
     font-family: 'Fraunces', serif;
   }
+}
+
+/* ADHD Focus mode: warm surfaces and less text.
+   White cards become cream; cool greys used for helper text become a warm brown that keeps 5:1+ contrast. */
+body.mode-adhd .bg-white {
+  background-color: rgb(var(--c-surface));
+}
+body.mode-adhd .text-\[\#6B6B6B\],
+body.mode-adhd .text-\[\#5B5E6B\],
+body.mode-adhd .text-\[\#8A8C95\],
+body.mode-adhd .text-neutral-400,
+body.mode-adhd .text-neutral-500,
+body.mode-adhd .text-neutral-600 {
+  color: #6A5446;
+}
+/* Secondary text (subtitles, descriptions, helper copy) is removed; long paragraphs are cut to 2 lines. */
+body.mode-adhd .adhd-hide {
+  display: none !important;
+}
+body.mode-adhd .adhd-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Custom Utilities */

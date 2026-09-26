@@ -226,10 +226,10 @@ export const InteractiveMindMap: React.FC<InteractiveMindMapProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-black/5 dark:border-white/10 gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="p-1 rounded-md bg-[#8266F0] text-white">
+            <span className="p-1 rounded-md bg-brand text-white">
               <Brain className="w-4 h-4" />
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#8266F0]">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand">
               Universal Knowledge Graph Topology
             </span>
           </div>
@@ -294,9 +294,9 @@ export const InteractiveMindMap: React.FC<InteractiveMindMapProps> = ({
           </div>
 
           {/* Connection Arrows 1 -> 2 */}
-          <div className="flex flex-col items-center justify-center text-[#8266F0] space-y-2">
+          <div className="flex flex-col items-center justify-center text-brand space-y-2">
             <ArrowRight className="w-5 h-5 animate-pulse" />
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8266F0]">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-brand">
               Synthesizes
             </span>
           </div>
@@ -373,7 +373,7 @@ export const InteractiveMindMap: React.FC<InteractiveMindMapProps> = ({
       {/* Selected Node Details Drawer */}
       {selectedNode && (
         <div className="p-4 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-start space-x-3 animate-in fade-in duration-150">
-          <div className="p-2 rounded-xl bg-white dark:bg-[#1E1E24] shadow-sm text-[#8266F0] shrink-0 mt-0.5">
+          <div className="p-2 rounded-xl bg-white dark:bg-[#1E1E24] shadow-sm text-brand shrink-0 mt-0.5">
             <Info className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">

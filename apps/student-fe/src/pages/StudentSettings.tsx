@@ -43,14 +43,14 @@ export const StudentSettings: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-black/5 dark:border-white/10">
         <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#8266F0]/10 text-[#8266F0] dark:bg-[#8266F0]/20 font-bold text-xs tracking-wider uppercase mb-2">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand/10 text-brand dark:bg-brand/20 font-bold text-xs tracking-wider uppercase mb-2">
             <Settings className="w-3.5 h-3.5" />
             <span>Preferences & Accessibility</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white font-display">
             Student Settings
           </h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+          <p className="adhd-hide text-sm text-neutral-600 dark:text-neutral-400 mt-1">
             Configure your academic level, cognitive accessibility modes, and voice assistant parameters.
           </p>
         </div>
@@ -61,14 +61,14 @@ export const StudentSettings: React.FC = () => {
         {/* 1. Academic & Personal Profile */}
         <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#8266F0]/10 text-[#8266F0] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-brand/10 text-brand flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold font-display text-neutral-900 dark:text-white">
                 Academic Identity
               </h2>
-              <p className="text-xs text-neutral-500">Sets the baseline for AI diagnostic calibrations</p>
+              <p className="adhd-hide text-xs text-neutral-500">Sets the baseline for AI diagnostic calibrations</p>
             </div>
           </div>
 
@@ -81,7 +81,7 @@ export const StudentSettings: React.FC = () => {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand"
               />
             </div>
 
@@ -104,7 +104,7 @@ export const StudentSettings: React.FC = () => {
               <select
                 value={selectedTier}
                 onChange={(e) => setSelectedTier(e.target.value as AcademicTier)}
-                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand"
               >
                 <option value="School (K-12)">School (K-12)</option>
                 <option value="Undergraduate (UG)">Undergraduate (UG)</option>
@@ -120,7 +120,7 @@ export const StudentSettings: React.FC = () => {
               <select
                 value={selectedDiscipline}
                 onChange={(e) => setSelectedDiscipline(e.target.value as AcademicDiscipline)}
-                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand"
               >
                 <option value="Computer Science">Computer Science</option>
                 <option value="Mathematics">Mathematics</option>
@@ -143,7 +143,7 @@ export const StudentSettings: React.FC = () => {
               <h2 className="text-lg font-bold font-display text-neutral-900 dark:text-white">
                 Cognitive & Accessibility Modes
               </h2>
-              <p className="text-xs text-neutral-500">Universal design for neurodivergent learners</p>
+              <p className="adhd-hide text-xs text-neutral-500">Universal design for neurodivergent learners</p>
             </div>
           </div>
 
@@ -153,13 +153,13 @@ export const StudentSettings: React.FC = () => {
               onClick={() => setMode("normal")}
               className={`p-4 rounded-2xl border text-left space-y-1.5 transition ${
                 mode === "normal"
-                  ? "bg-[#8266F0]/10 border-[#8266F0] text-neutral-900 dark:text-white"
+                  ? "bg-brand/10 border-brand text-neutral-900 dark:text-white"
                   : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 text-neutral-600 dark:text-neutral-400"
               }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold">Standard</span>
-                {mode === "normal" && <CheckCircle2 className="w-4 h-4 text-[#8266F0]" />}
+                {mode === "normal" && <CheckCircle2 className="w-4 h-4 text-brand" />}
               </div>
               <p className="text-[11px] leading-relaxed">Balanced layout and default typography</p>
             </button>
@@ -177,7 +177,7 @@ export const StudentSettings: React.FC = () => {
                 <span className="text-xs font-bold text-amber-600 dark:text-amber-400">ADHD Focus</span>
                 {mode === "adhd" && <CheckCircle2 className="w-4 h-4 text-amber-500" />}
               </div>
-              <p className="text-[11px] leading-relaxed">Single dominant card & minimized distraction</p>
+              <p className="text-[11px] leading-relaxed">Warm theme with less text, to focus on one thing at a time</p>
             </button>
 
             <button
@@ -201,10 +201,10 @@ export const StudentSettings: React.FC = () => {
           <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-between">
             <div className="space-y-0.5">
               <span className="text-xs font-bold text-neutral-900 dark:text-white flex items-center space-x-1.5">
-                <Eye className="w-4 h-4 text-[#8266F0]" />
+                <Eye className="w-4 h-4 text-brand" />
                 <span>Interactive Reading Ruler</span>
               </span>
-              <p className="text-[11px] text-neutral-500">
+              <p className="adhd-hide text-[11px] text-neutral-500">
                 Horizontal tracking beam that follows your mouse cursor across text
               </p>
             </div>
@@ -235,7 +235,7 @@ export const StudentSettings: React.FC = () => {
               <h2 className="text-lg font-bold font-display text-neutral-900 dark:text-white">
                 Speech & Audio Assistant
               </h2>
-              <p className="text-xs text-neutral-500">Web Speech API synthesis for auditory learning</p>
+              <p className="adhd-hide text-xs text-neutral-500">Web Speech API synthesis for auditory learning</p>
             </div>
           </div>
 
@@ -251,7 +251,7 @@ export const StudentSettings: React.FC = () => {
               step="0.05"
               value={speechRate}
               onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-              className="w-full accent-[#8266F0]"
+              className="w-full accent-brand"
             />
           </div>
         </div>
@@ -267,7 +267,7 @@ export const StudentSettings: React.FC = () => {
                 <h2 className="text-lg font-bold font-display text-neutral-900 dark:text-white">
                   Application Role Perspective
                 </h2>
-                <p className="text-xs text-neutral-500">Currently active role: <span className="font-bold uppercase text-[#8266F0]">{role}</span></p>
+                <p className="text-xs text-neutral-500">Currently active role: <span className="font-bold uppercase text-brand">{role}</span></p>
               </div>
             </div>
 
@@ -285,7 +285,7 @@ export const StudentSettings: React.FC = () => {
         <div className="flex justify-end pt-2">
           <button
             type="submit"
-            className="px-8 py-3.5 rounded-2xl font-bold text-xs bg-gradient-to-r from-[#8266F0] to-[#EC4899] text-white hover:opacity-95 shadow-lg shadow-[#8266F0]/25 transition flex items-center space-x-2"
+            className="px-8 py-3.5 rounded-2xl font-bold text-xs bg-gradient-to-r from-brand to-[#EC4899] text-white hover:opacity-95 shadow-lg shadow-brand/25 transition flex items-center space-x-2"
           >
             <span>Save Preferences</span>
             <CheckCircle2 className="w-4 h-4" />

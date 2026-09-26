@@ -26,7 +26,7 @@ export const MisconceptionLogModal: React.FC<MisconceptionLogModalProps> = ({ is
       case "Remediating":
         return "bg-amber-500/10 text-amber-600 border-amber-500/20 animate-pulse";
       case "Re-Evaluating":
-        return "bg-[#8266F0]/10 text-[#8266F0] border-[#8266F0]/20";
+        return "bg-brand/10 text-brand border-brand/20";
       case "Resolved":
         return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
     }
@@ -54,12 +54,12 @@ export const MisconceptionLogModal: React.FC<MisconceptionLogModalProps> = ({ is
         {/* Modal Header */}
         <div className="p-6 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#8266F0]/10 text-[#8266F0] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-brand/10 text-brand flex items-center justify-center">
               <History className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8266F0]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand">
                   Longitudinal Student Telemetry
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600">
@@ -93,7 +93,7 @@ export const MisconceptionLogModal: React.FC<MisconceptionLogModalProps> = ({ is
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/20">
               2. Remediating
             </div>
-            <div className="p-2 rounded-xl bg-[#8266F0]/10 text-[#8266F0] font-semibold border border-[#8266F0]/20">
+            <div className="p-2 rounded-xl bg-brand/10 text-brand font-semibold border border-brand/20">
               3. Re-Evaluating
             </div>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
@@ -126,7 +126,7 @@ export const MisconceptionLogModal: React.FC<MisconceptionLogModalProps> = ({ is
               </h4>
 
               <div className="p-3 rounded-xl bg-black/5 dark:bg-white/5 text-xs text-neutral-700 dark:text-neutral-300 flex items-start space-x-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#8266F0] shrink-0 mt-0.5" />
+                <Sparkles className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5" />
                 <span>
                   <strong>Active Remedial Intervention:</strong> {item.remedialInterventionTitle}
                 </span>
