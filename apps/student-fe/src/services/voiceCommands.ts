@@ -139,7 +139,7 @@ export function parseVoiceCommand(input: string, role: "student" | "teacher"): V
   }
 
   // Role toggle
-  const toggle = text.match(/^toggle\s*:\s*(\w+)/) || text.match(/\bswitch (?:to )?(?:the )?(teacher|student)\b/);
+  const toggle = text.match(/^toggle\s*:?\s*(\w+)/) || text.match(/\bswitch (?:to )?(?:the )?(teacher|student)\b/);
   if (toggle) {
     const target = toggle[1].startsWith("teach") ? "teacher" : toggle[1].startsWith("stud") ? "student" : null;
     if (!target) return { reply: "I can toggle between the teacher and student views. Say toggle:teacher or toggle:student.", action: { type: "none" } };

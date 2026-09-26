@@ -15,6 +15,7 @@ from api.views import (
 from api.tutor import TutorChatView, TutorTestGenerateView, TutorTestAnalyzeView
 from api.tutor_open import OpenProblemGenerateView, OpenProblemEvaluateView
 from api.teacher_insights import TeacherInsightsAskView
+from api.voice import VoiceTranscribeView
 
 app_name = "api"
 
@@ -33,4 +34,5 @@ urlpatterns = [
     path("tutor/open/generate/", OpenProblemGenerateView.as_view(), name="tutor-open-generate"),
     path("tutor/open/evaluate/", OpenProblemEvaluateView.as_view(), name="tutor-open-evaluate"),
     path("teacher/insights/ask/", TeacherInsightsAskView.as_view(), name="teacher-insights-ask"),
+    path("voice/transcribe/", VoiceTranscribeView.as_view(), name="voice-transcribe"),
 ]

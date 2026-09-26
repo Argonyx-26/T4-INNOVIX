@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, X, Sparkles, SendHorizontal, AlertCircle } from "lucide-react";
+import { Mic, MicOff, X, Sparkles, SendHorizontal, AlertCircle, Loader2 } from "lucide-react";
 import { useThemeMode } from "../../context/ThemeModeContext";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -11,6 +11,7 @@ import {
   VOICE_HINT_KEY,
   parseVoiceCommand,
 } from "../../services/voiceCommands";
+import { RecordingHandle, VoiceInputError, canRecord, startRecording, transcribeAudio } from "../../services/voiceRecorder";
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -18,15 +19,17 @@ interface VoiceAssistantModalProps {
   onNavigate: (hash: string) => void;
 }
 
-const MIC_ERRORS: Record<string, string> = {
-  network:
-    "Voice recognition needs an internet connection to your browser's speech service, and it couldn't be reached. Type your command below instead.",
+// Errors from the browser's built-in recognition, which is only the fallback path.
+const BROWSER_SPEECH_ERRORS: Record<string, string> = {
+  network: "Your browser's own speech service couldn't be reached either. Type your command below instead.",
   "not-allowed": "Microphone access was blocked. Allow it from the lock icon in the address bar, or type your command below.",
   "service-not-allowed": "This browser doesn't allow speech recognition here. Type your command below instead.",
   "no-speech": "I didn't hear anything. Tap the mic and try again, or type your command below.",
   "audio-capture": "No microphone was found. Connect one, or type your command below.",
   "language-not-supported": "Speech recognition isn't available for English on this browser. Type your command below instead.",
 };
+
+const INTRO = "Tap the mic and say a command, or type one below. Say \"help\" to see what I can do.";
 
 const getRecognitionCtor = (): any =>
   typeof window === "undefined" ? null : (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
@@ -36,18 +39,25 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen
   const { role, switchRole } = useAuth();
   const currentRole: "student" | "teacher" = role === "teacher" ? "teacher" : "student";
 
-  const [isListening, setIsListening] = useState(false);
+  // idle -> listening (recording) -> transcribing (server) -> the command runs
+  const [phase, setPhase] = useState<"idle" | "listening" | "transcribing">("idle");
+  const isListening = phase === "listening";
+  const [level, setLevel] = useState(0);
+  // After the Eduvia server can't transcribe, the next tap tries the browser's built-in recognition.
+  const [useBrowserSpeech, setUseBrowserSpeech] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [typed, setTyped] = useState("");
-  const [reply, setReply] = useState("Tap the mic and say a command, or type one below. Say \"help\" to see what I can do.");
+  const [reply, setReply] = useState(INTRO);
   const [showHelp, setShowHelp] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  const recordingRef = useRef<RecordingHandle | null>(null);
+  const uploadRef = useRef<AbortController | null>(null);
   const closeTimer = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const micSupported = !!getRecognitionCtor();
+  const micSupported = canRecord() || !!getRecognitionCtor();
 
-  const stopRecognition = () => {
+  const stopAll = () => {
     const rec = recognitionRef.current;
     recognitionRef.current = null;
     if (rec) {
@@ -58,7 +68,12 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen
         // already stopped
       }
     }
-    setIsListening(false);
+    recordingRef.current?.cancel();
+    recordingRef.current = null;
+    uploadRef.current?.abort();
+    uploadRef.current = null;
+    setLevel(0);
+    setPhase("idle");
   };
 
   // Reset on open, clean up on close/unmount.
@@ -67,11 +82,11 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen
       setTranscript("");
       setTyped("");
       setShowHelp(false);
-      setMicError(micSupported ? null : "Speech recognition isn't supported in this browser. Type your command below instead.");
-      setReply("Tap the mic and say a command, or type one below. Say \"help\" to see what I can do.");
+      setMicError(micSupported ? null : "This browser can't record from the microphone. Type your command below instead.");
+      setReply(INTRO);
     }
     return () => {
-      stopRecognition();
+      stopAll();
       if (closeTimer.current) window.clearTimeout(closeTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,10 +148,76 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen
     [currentRole, onClose, onNavigate, speak, switchRole]
   );
 
-  const startListening = () => {
+  // Primary path: record in the page and transcribe on the Eduvia server.
+  const finishRecording = async () => {
+    const handle = recordingRef.current;
+    recordingRef.current = null;
+    if (!handle) return;
+    setLevel(0);
+    const heard = handle.heardSpeech();
+    const blob = await handle.stop();
+    if (!heard && blob.size < 2000) {
+      setPhase("idle");
+      setMicError("I didn't hear anything. Tap the mic and speak, or type your command below.");
+      return;
+    }
+    setPhase("transcribing");
+    const controller = new AbortController();
+    uploadRef.current = controller;
+    try {
+      const text = await transcribeAudio(blob, controller.signal);
+      if (controller.signal.aborted) return;
+      setTranscript(text);
+      setPhase("idle");
+      runCommand(text);
+    } catch (err) {
+      if (controller.signal.aborted || (err as Error)?.name === "AbortError") return;
+      setPhase("idle");
+      const voiceErr = err instanceof VoiceInputError ? err : null;
+      const canFallBack = (voiceErr?.code === "network" || voiceErr?.code === "unavailable") && !!getRecognitionCtor();
+      if (canFallBack) setUseBrowserSpeech(true);
+      setMicError(
+        (voiceErr?.message || "I couldn't understand that recording. Try again.") +
+          (canFallBack ? " Tap the mic to try your browser's speech recognition instead." : "")
+      );
+      inputRef.current?.focus();
+    } finally {
+      if (uploadRef.current === controller) uploadRef.current = null;
+    }
+  };
+
+  const startServerListening = async () => {
+    stopAll();
+    setTranscript("");
+    setMicError(null);
+    setPhase("listening");
+    try {
+      recordingRef.current = await startRecording({
+        onLevel: setLevel,
+        onAutoStop: (reason) => {
+          if (reason !== "no-speech") {
+            finishRecording();
+            return;
+          }
+          recordingRef.current?.cancel();
+          recordingRef.current = null;
+          setLevel(0);
+          setPhase("idle");
+          setMicError("I didn't hear anything. Check that the right microphone is selected, then try again or type below.");
+        },
+      });
+    } catch (err) {
+      setPhase("idle");
+      setMicError(err instanceof Error ? err.message : "The microphone couldn't start. Type your command below instead.");
+      inputRef.current?.focus();
+    }
+  };
+
+  // Fallback path: the browser's built-in recognition (depends on the browser vendor's cloud).
+  const startBrowserListening = () => {
     const Ctor = getRecognitionCtor();
     if (!Ctor) return;
-    stopRecognition();
+    stopAll();
     setTranscript("");
     setMicError(null);
 
@@ -159,26 +240,37 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen
     rec.onerror = (event: any) => {
       failed = true;
       if (event.error === "aborted") return;
-      setMicError(MIC_ERRORS[event.error] || `The microphone stopped (${event.error || "unknown error"}). Type your command below instead.`);
+      // The browser service is unusable too: go back to server recording next time.
+      if (event.error === "network" || event.error === "service-not-allowed") setUseBrowserSpeech(false);
+      setMicError(BROWSER_SPEECH_ERRORS[event.error] || `The microphone stopped (${event.error || "unknown error"}). Type your command below instead.`);
       inputRef.current?.focus();
     };
     rec.onend = () => {
       recognitionRef.current = null;
-      setIsListening(false);
+      setPhase("idle");
       if (!failed && finalText.trim()) runCommand(finalText.trim());
     };
 
     recognitionRef.current = rec;
     try {
       rec.start();
-      setIsListening(true);
+      setPhase("listening");
     } catch {
       recognitionRef.current = null;
       setMicError("The microphone couldn't start. Type your command below instead.");
     }
   };
 
-  const toggleListening = () => (isListening ? recognitionRef.current?.stop() : startListening());
+  const toggleListening = () => {
+    if (phase === "transcribing") return;
+    if (isListening) {
+      if (recordingRef.current) finishRecording();
+      else recognitionRef.current?.stop();
+      return;
+    }
+    if (canRecord() && !useBrowserSpeech) startServerListening();
+    else startBrowserListening();
+  };
 
   const submitTyped = (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,18 +319,38 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen
         <div className="my-6 flex flex-col items-center justify-center text-center">
           <button
             onClick={toggleListening}
-            disabled={!micSupported}
-            className={`relative p-6 rounded-full transition-all duration-300 transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+            disabled={!micSupported || phase === "transcribing"}
+            className={`relative p-6 rounded-full transition-all duration-300 transform active:scale-95 disabled:cursor-not-allowed ${
+              !micSupported ? "opacity-40" : ""
+            } ${
               isListening ? "bg-rose-500 text-white shadow-xl shadow-rose-500/30 scale-110" : "bg-brand text-white shadow-lg shadow-brand/30 hover:scale-105"
             }`}
-            aria-label={isListening ? "Stop listening" : "Start listening"}
+            aria-label={isListening ? "Stop listening" : phase === "transcribing" ? "Transcribing" : "Start listening"}
           >
-            {isListening ? <Mic className="w-8 h-8 animate-pulse" /> : <MicOff className="w-8 h-8" />}
-            {isListening && <span className="absolute -inset-2 rounded-full border-2 border-rose-500/40 animate-ping pointer-events-none" />}
+            {phase === "transcribing" ? (
+              <Loader2 className="w-8 h-8 animate-spin" />
+            ) : isListening ? (
+              <Mic className="w-8 h-8" />
+            ) : (
+              <MicOff className="w-8 h-8" />
+            )}
+            {isListening && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 rounded-full border-4 border-rose-500/40 pointer-events-none transition-transform duration-75"
+                style={{ transform: `scale(${1.1 + level * 0.6})` }}
+              />
+            )}
           </button>
 
-          <div className="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            {!micSupported ? "Microphone unavailable" : isListening ? "Listening... speak your command" : "Tap to speak"}
+          <div className="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400" aria-live="polite">
+            {!micSupported
+              ? "Microphone unavailable"
+              : phase === "transcribing"
+              ? "Working out what you said..."
+              : isListening
+              ? "Listening... tap to stop"
+              : "Tap to speak"}
           </div>
 
           {transcript && (
