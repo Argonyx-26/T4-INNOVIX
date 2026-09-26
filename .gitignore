@@ -67,3 +67,6 @@ yarn-error.log*
 
 # Platform specification document
 application_features_and_workflow.txt
+
+# Django collectstatic output
+apps/django-api/staticfiles/

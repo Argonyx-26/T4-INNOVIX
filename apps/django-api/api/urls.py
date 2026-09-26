@@ -16,6 +16,7 @@ from api.tutor import TutorChatView, TutorTestGenerateView, TutorTestAnalyzeView
 from api.tutor_open import OpenProblemGenerateView, OpenProblemEvaluateView
 from api.teacher_insights import TeacherInsightsAskView
 from api.voice import VoiceTranscribeView
+from api.uploads import CloudinarySignatureView
 
 app_name = "api"
 
@@ -35,4 +36,5 @@ urlpatterns = [
     path("tutor/open/evaluate/", OpenProblemEvaluateView.as_view(), name="tutor-open-evaluate"),
     path("teacher/insights/ask/", TeacherInsightsAskView.as_view(), name="teacher-insights-ask"),
     path("voice/transcribe/", VoiceTranscribeView.as_view(), name="voice-transcribe"),
+    path("uploads/cloudinary-signature/", CloudinarySignatureView.as_view(), name="cloudinary-signature"),
 ]
