@@ -87,10 +87,68 @@ export const tutorService = {
     post<{ reply: string; provider: string }>("/tutor/chat/", { messages, topic }, uid),
 
   generateTest: (
-    params: { topic: string; difficulty: Difficulty; count: number; known_misconceptions: { key: string; title: string }[] },
+    params: { topic: string; subject?: string; difficulty: Difficulty; count: number; known_misconceptions: { key: string; title: string }[] },
     uid?: string
   ) => post<GeneratedTest>("/tutor/test/generate/", params, uid),
 
   analyzeTest: (token: string, answers: Record<string, string | null>, uid?: string) =>
     post<TestAnalysis>("/tutor/test/analyze/", { token, answers }, uid),
+};
+
+// ---------------------------------------------------------------------------
+// Open-ended problems
+// ---------------------------------------------------------------------------
+export interface MisconceptionRef {
+  key: string;
+  title: string;
+  explanation: string;
+}
+
+export interface OpenProblem {
+  id: string;
+  prompt: string;
+  approach: string;
+}
+
+export interface OpenProblemSet {
+  subject: string;
+  topic: string;
+  difficulty: Difficulty;
+  focus: MisconceptionRef | null;
+  provider: string;
+  token: string;
+  problems: OpenProblem[];
+}
+
+export interface OpenEvaluation {
+  problem_id: string;
+  passed: boolean;
+  answer_correct: boolean;
+  reasoning_quality: "sound" | "partial" | "flawed" | "missing";
+  score: number;
+  feedback: string;
+  misconception: MisconceptionRef | null;
+  concepts_shown: string[];
+  gaps: string[];
+  reference_answer: string;
+  key_reasoning: string[];
+  provider: string;
+}
+
+export const openProblemService = {
+  generate: (
+    params: {
+      subject: string;
+      topic: string;
+      difficulty: Difficulty;
+      count?: number;
+      focus?: MisconceptionRef | null;
+      avoid?: string[];
+      known_misconceptions?: { key: string; title: string }[];
+    },
+    uid?: string
+  ) => post<OpenProblemSet>("/tutor/open/generate/", { count: 1, ...params }, uid),
+
+  evaluate: (token: string, problemId: string, answer: string, reasoning: string, uid?: string) =>
+    post<OpenEvaluation>("/tutor/open/evaluate/", { token, problem_id: problemId, answer, reasoning }, uid),
 };

@@ -147,3 +147,17 @@ class TutorResilienceTests(TestCase):
         self.assertEqual(res.status_code, 503)
         self.assertEqual(res.json()["code"], "ai_rate_limited")
         self.assertIn("try again in a minute", res.json()["error"])
+
+
+class NoEmojiTests(TestCase):
+    def test_llm_output_is_stripped_and_prompt_forbids_emoji(self):
+        seen = {}
+
+        def provider(system, messages, json_mode):
+            seen["system"] = system
+            return "Great job \U0001F389\u2728 keep going \u2705 x \u2192 y"
+
+        with mock.patch.object(tutor, "PROVIDERS", [("groq", provider)]):
+            text, _ = tutor.call_llm("sys", [{"role": "user", "content": "hi"}])
+        self.assertEqual(text, "Great job keep going x \u2192 y")
+        self.assertIn("Never use emojis", seen["system"])

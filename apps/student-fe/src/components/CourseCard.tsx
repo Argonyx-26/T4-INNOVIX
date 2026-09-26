@@ -24,12 +24,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onSelect }) => {
   };
 
   return (
-    <div className="group relative flex flex-col justify-between bg-white dark:bg-[#1E1E24] rounded-3xl p-6 border border-black/5 dark:border-white/10 shadow-sm hover:shadow-xl hover:border-[#8266F0]/30 transition-all duration-300">
+    <div className="group relative flex flex-col justify-between bg-white dark:bg-[#1E1E24] rounded-3xl p-6 border border-black/5 dark:border-white/10 shadow-sm hover:shadow-xl hover:border-brand/30 transition-all duration-300">
       <div>
         {/* Top Badges & Bookmark */}
         <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#8266F0]/10 text-[#8266F0] dark:bg-[#8266F0]/25 dark:text-[#a794ff]">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand/10 text-brand dark:bg-brand/25 dark:text-[#a794ff]">
               {course.grade}
             </span>
             {course.tier && (
@@ -50,7 +50,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onSelect }) => {
                   e.stopPropagation();
                   speak(`${course.title}. ${course.description}`);
                 }}
-                className="p-2 rounded-xl text-slate-400 hover:text-[#8266F0] hover:bg-black/5 transition"
+                className="p-2 rounded-xl text-slate-400 hover:text-brand hover:bg-black/5 transition"
                 title="Read aloud"
               >
                 <Volume2 className="w-4 h-4" />
@@ -75,10 +75,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onSelect }) => {
         </div>
 
         {/* Title & Description */}
-        <h3 className="font-display font-bold text-lg text-[#141414] dark:text-white group-hover:text-[#8266F0] transition-colors leading-snug">
+        <h3 className="font-display font-bold text-lg text-[#141414] dark:text-white group-hover:text-brand transition-colors leading-snug">
           {course.title}
         </h3>
-        <p className="mt-2 text-xs text-[#6B6B6B] dark:text-slate-300 leading-relaxed line-clamp-2">
+        <p className="adhd-hide mt-2 text-xs text-[#6B6B6B] dark:text-slate-300 leading-relaxed line-clamp-2">
           {course.description}
         </p>
 
@@ -110,7 +110,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, onSelect }) => {
 
         <button
           onClick={() => onSelect(course)}
-          className="inline-flex items-center space-x-1 font-semibold text-[#8266F0] hover:text-[#EC4899] transition-colors"
+          className="inline-flex items-center space-x-1 font-semibold text-brand hover:text-[#EC4899] transition-colors"
         >
           <span>Syllabus</span>
           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />

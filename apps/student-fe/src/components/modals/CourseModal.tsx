@@ -35,10 +35,10 @@ export const CourseModal: React.FC<CourseModalProps> = ({ course, onClose }) => 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 sm:p-8 bg-gradient-to-r from-[#8266F0]/10 via-[#EC4899]/5 to-transparent border-b border-black/5 dark:border-white/10">
+        <div className="p-6 sm:p-8 bg-gradient-to-r from-brand/10 via-[#EC4899]/5 to-transparent border-b border-black/5 dark:border-white/10">
           <div className="flex items-start justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#8266F0] text-white">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-brand text-white">
                 {course.grade}
               </span>
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/10 text-[#141414] dark:text-white">
@@ -123,7 +123,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({ course, onClose }) => 
                   <ul className="space-y-1.5 pl-2">
                     {mod.lessons.map((lesson, lIdx) => (
                       <li key={lIdx} className="text-xs text-[#6B6B6B] dark:text-slate-300 flex items-center space-x-2">
-                        <PlayCircle className="w-3.5 h-3.5 text-[#8266F0]" />
+                        <PlayCircle className="w-3.5 h-3.5 text-brand" />
                         <span>{lesson}</span>
                       </li>
                     ))}
@@ -138,7 +138,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({ course, onClose }) => 
         <div className="p-6 bg-black/5 dark:bg-white/5 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
           <button
             onClick={() => toggleBookmark(course)}
-            className="flex items-center space-x-2 text-sm font-semibold text-[#141414] dark:text-white hover:text-[#8266F0] transition"
+            className="flex items-center space-x-2 text-sm font-semibold text-[#141414] dark:text-white hover:text-brand transition"
           >
             {isBookmarked ? (
               <>
@@ -158,7 +158,7 @@ export const CourseModal: React.FC<CourseModalProps> = ({ course, onClose }) => 
               showToast("Enrolled Successfully!", `You have enrolled in ${course.title}. Progress synced.`, "success");
               onClose();
             }}
-            className="px-6 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-[#8266F0] to-[#EC4899] hover:opacity-95 text-white shadow-lg shadow-[#8266F0]/25 transition"
+            className="px-6 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-brand to-[#EC4899] hover:opacity-95 text-white shadow-lg shadow-brand/25 transition"
           >
             Enroll & Start Learning
           </button>

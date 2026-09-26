@@ -32,9 +32,9 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
   return (
     <div className="max-w-2xl mx-auto py-10 px-4">
       {/* Top Single Focus Tracker Bar */}
-      <div className="mb-8 p-4 rounded-3xl bg-white border border-[#1F5C52]/20 shadow-sm flex items-center justify-between">
+      <div className="mb-8 p-4 rounded-3xl bg-white border border-brand/20 shadow-sm flex items-center justify-between">
         <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#F1645C] text-white flex items-center justify-center font-bold text-xs">
+          <div className="w-8 h-8 rounded-xl bg-brand-strong text-white flex items-center justify-center font-bold text-xs">
             {currentStage + 1}
           </div>
           <div>
@@ -51,19 +51,19 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
           </div>
         </div>
 
-        <div className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-[#1F5C52]/10 text-[#1F5C52]">
+        <div className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-brand/10 text-brand">
           Time: {elapsedSeconds}s
         </div>
       </div>
 
       {/* STAGE 0: Single-Action Diagnostic Card */}
       {currentStage === 0 && (
-        <div className="bg-white rounded-3xl p-8 border-2 border-[#1F5C52]/30 shadow-lg text-center space-y-6">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#F1645C] bg-[#F1645C]/10 px-3 py-1 rounded-full inline-block">
+        <div className="bg-white rounded-3xl p-8 border-2 border-brand/30 shadow-lg text-center space-y-6">
+          <span className="text-xs font-bold uppercase tracking-wider text-brand-strong bg-brand-strong/10 px-3 py-1 rounded-full inline-block">
             One Single Goal: Solve for x
           </span>
 
-          <div className="p-6 rounded-2xl bg-[#FBF2E4] border border-[#1F5C52]/20 font-mono font-extrabold text-3xl text-[#1C1917]">
+          <div className="p-6 rounded-2xl bg-fill border border-brand/20 font-mono font-extrabold text-3xl text-[#1C1917]">
             {equation}
           </div>
 
@@ -76,7 +76,7 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
               <button
                 key={opt.id}
                 onClick={() => onSelectOption(opt)}
-                className="w-full min-h-[56px] text-lg font-bold rounded-2xl border-2 border-[#1F5C52]/30 bg-white hover:bg-[#B9E4D0]/30 hover:border-[#1F5C52] text-[#1C1917] transition transform active:scale-95 flex items-center justify-center space-x-2"
+                className="w-full min-h-[56px] text-lg font-bold rounded-2xl border-2 border-brand/30 bg-white hover:bg-[#B9E4D0]/30 hover:border-brand text-[#1C1917] transition transform active:scale-95 flex items-center justify-center space-x-2"
               >
                 <span>{opt.label}</span>
               </button>
@@ -87,8 +87,8 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
 
       {/* STAGE 1: Cognitive Pattern Identified */}
       {currentStage === 1 && selectedOption && (
-        <div className="bg-white rounded-3xl p-8 border-2 border-[#F1645C] shadow-lg space-y-6 text-center">
-          <span className="text-xs font-bold uppercase tracking-wider text-white bg-[#F1645C] px-3.5 py-1.5 rounded-full inline-block">
+        <div className="bg-white rounded-3xl p-8 border-2 border-brand-strong shadow-lg space-y-6 text-center">
+          <span className="text-xs font-bold uppercase tracking-wider text-white bg-brand-strong px-3.5 py-1.5 rounded-full inline-block">
             {selectedOption.isCorrect ? "Mastery Achieved!" : "Insight Spotlight Found"}
           </span>
 
@@ -96,13 +96,13 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
             {selectedOption.isCorrect ? "Perfect Execution!" : selectedOption.misconceptionTitle}
           </h3>
 
-          <div className="p-5 rounded-2xl bg-[#FBF2E4] border border-[#1F5C52]/20 text-left text-sm text-[#1C1917] leading-relaxed">
+          <div className="p-5 rounded-2xl bg-fill border border-brand/20 text-left text-sm text-[#1C1917] leading-relaxed">
             {selectedOption.errorRootCause || selectedOption.explanation}
           </div>
 
           <button
             onClick={onAdvanceStage}
-            className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-[#1F5C52] hover:opacity-95 shadow-md flex items-center justify-center space-x-2"
+            className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-brand hover:opacity-95 shadow-md flex items-center justify-center space-x-2"
           >
             <span>{selectedOption.isCorrect ? "Review Next Best Action" : "Start 60s Micro-Fix"}</span>
             <ArrowRight className="w-5 h-5" />
@@ -112,12 +112,12 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
 
       {/* STAGE 2: 60-Second Micro-Intervention */}
       {currentStage === 2 && (
-        <div className="bg-white rounded-3xl p-8 border-2 border-[#1F5C52] shadow-lg space-y-6 text-center">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1F5C52] bg-[#B9E4D0] px-3 py-1 rounded-full inline-block">
+        <div className="bg-white rounded-3xl p-8 border-2 border-brand shadow-lg space-y-6 text-center">
+          <span className="text-xs font-bold uppercase tracking-wider text-brand bg-[#B9E4D0] px-3 py-1 rounded-full inline-block">
             The Debt Cancellation Rule
           </span>
 
-          <div className="p-6 rounded-2xl bg-[#1F5C52] text-white font-mono font-bold text-2xl">
+          <div className="p-6 rounded-2xl bg-brand text-white font-mono font-bold text-2xl">
             -2 × (-9) = +18
           </div>
 
@@ -127,7 +127,7 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
 
           <button
             onClick={onAdvanceStage}
-            className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-[#F1645C] hover:opacity-95 shadow-md flex items-center justify-center space-x-2"
+            className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-brand-strong hover:opacity-95 shadow-md flex items-center justify-center space-x-2"
           >
             <span>Ready for 1 Quick Verification Question</span>
             <ArrowRight className="w-5 h-5" />
@@ -137,8 +137,8 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
 
       {/* STAGE 3: Verification Challenge */}
       {currentStage === 3 && (
-        <div className="bg-white rounded-3xl p-8 border-2 border-[#1F5C52]/40 shadow-lg space-y-6 text-center">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1F5C52] bg-[#B9E4D0] px-3 py-1 rounded-full inline-block">
+        <div className="bg-white rounded-3xl p-8 border-2 border-brand/40 shadow-lg space-y-6 text-center">
+          <span className="text-xs font-bold uppercase tracking-wider text-brand bg-[#B9E4D0] px-3 py-1 rounded-full inline-block">
             Verification Transfer
           </span>
 
@@ -156,7 +156,7 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
                     ? opt.isCorrect
                       ? "bg-emerald-600 text-white border-emerald-600"
                       : "bg-rose-600 text-white border-rose-600"
-                    : "bg-white border-[#1F5C52]/30 hover:border-[#1F5C52] text-[#1C1917]"
+                    : "bg-white border-brand/30 hover:border-brand text-[#1C1917]"
                 }`}
               >
                 {opt.label}
@@ -167,7 +167,7 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
           {verificationAnswer && (
             <button
               onClick={onAdvanceStage}
-              className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-[#1F5C52] hover:opacity-95 shadow-md flex items-center justify-center space-x-2 mt-4"
+              className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-brand hover:opacity-95 shadow-md flex items-center justify-center space-x-2 mt-4"
             >
               <span>See Updated Mastery State</span>
               <ArrowRight className="w-5 h-5" />
@@ -180,7 +180,7 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
       {currentStage === 4 && (
         <div className="bg-white rounded-3xl p-8 border-2 border-[#EFC24A] shadow-xl text-center space-y-6">
           <div className="w-16 h-16 rounded-full bg-[#EFC24A]/20 text-[#EFC24A] flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-10 h-10 text-[#1F5C52]" />
+            <CheckCircle2 className="w-10 h-10 text-brand" />
           </div>
 
           <h3 className="font-display font-bold text-2xl text-[#1C1917]">
@@ -188,19 +188,19 @@ export const ADHDDiagnosticView: React.FC<ADHDDiagnosticViewProps> = ({
           </h3>
 
           <div className="grid grid-cols-2 gap-3 text-left">
-            <div className="p-4 rounded-2xl bg-[#B9E4D0]/30 border border-[#1F5C52]/20">
+            <div className="p-4 rounded-2xl bg-[#B9E4D0]/30 border border-brand/20">
               <span className="text-xs text-[#57534E]">Mastery Score</span>
-              <div className="text-2xl font-bold text-[#1F5C52]">88% (+38%)</div>
+              <div className="text-2xl font-bold text-brand">88% (+38%)</div>
             </div>
-            <div className="p-4 rounded-2xl bg-[#F5A9C4]/30 border border-[#F1645C]/20">
+            <div className="p-4 rounded-2xl bg-[#F5A9C4]/30 border border-brand-strong/20">
               <span className="text-xs text-[#57534E]">Misconception Risk</span>
-              <div className="text-2xl font-bold text-[#F1645C]">12% (Cleared)</div>
+              <div className="text-2xl font-bold text-brand-strong">12% (Cleared)</div>
             </div>
           </div>
 
           <button
             onClick={onReset}
-            className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-[#1F5C52] hover:opacity-95 shadow-md flex items-center justify-center space-x-2"
+            className="w-full min-h-[56px] rounded-2xl font-bold text-base text-white bg-brand hover:opacity-95 shadow-md flex items-center justify-center space-x-2"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Retest Another Diagnostic Loop</span>

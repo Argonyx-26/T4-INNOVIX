@@ -48,6 +48,12 @@ export interface Instructor {
   studentsTaught: number;
   avatar: string;
   availableHours: string;
+  discipline?: AcademicDiscipline;
+  institution?: string;
+  email?: string;
+  isRegistered?: boolean;
+  matchScore?: number;
+  fitReason?: string;
 }
 
 export interface DiagnosticOption {
@@ -121,6 +127,7 @@ export interface EducationalResource {
   durationOrPages: string;
   rating: number;
   bookmarked?: boolean;
+  isGlobal?: boolean;
 }
 
 export interface StudentMisconceptionRecord {
@@ -154,6 +161,7 @@ export interface StudentTelemetryProfile {
   recentTrajectory: "Improving" | "Plateau" | "At-Risk";
   recommendedPeerMatch: string;
   attendancePct: number;
+  isDbStudent?: boolean;
 }
 
 export interface RemedialPod {
@@ -188,4 +196,7 @@ export interface UserProfile {
   enrolledCourses?: string[];
   createdAt?: string;
   lastLogin?: string;
+  // Chosen by the student; defines the teacher's mentees.
+  mentorId?: string | null;
+  mentorName?: string | null;
 }

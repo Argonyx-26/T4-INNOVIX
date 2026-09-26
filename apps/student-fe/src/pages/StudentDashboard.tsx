@@ -26,8 +26,19 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useThemeMode } from "../context/ThemeModeContext";
 import { dataService, DayActivity, WeeklyActivity } from "../services/dataService";
-import { StudentMisconceptionRecord } from "../types";
-import { Avatar } from "../components/StudentShell";
+import { StudentMisconceptionRecord, Instructor } from "../types";
+import { Avatar } from "../components/AppShell";
+import { MentorPicker } from "../components/MentorPicker";
+import {
+  learningService,
+  latestSession,
+  describeSession,
+  recommendTopics,
+  Recommendation,
+  Sessions,
+  TopicMasteryMap,
+} from "../services/learningService";
+import { PENDING_PRACTICE_KEY, RESUME_KEY } from "./AITutor";
 
 interface StudentDashboardProps {
   onNavigate: (hash: string) => void;
@@ -145,6 +156,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
   const [resourceCount, setResourceCount] = useState<number | null>(null);
   const [activity, setActivity] = useState<WeeklyActivity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<Sessions>({});
+  const [mastery, setMastery] = useState<TopicMasteryMap>({});
 
   const [tab, setTab] = useState<TabId>("all");
   const [week, setWeek] = useState<"thisWeek" | "lastWeek">("thisWeek");
@@ -160,6 +173,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
   const [tabsAtEnd, setTabsAtEnd] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
 
+  const [matchedInstructors, setMatchedInstructors] = useState<Instructor[]>([]);
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -168,7 +183,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
       dataService.getChallenges(),
       dataService.getResources(),
       dataService.getWeeklyActivity(uid),
-    ]).then(([plan, logs, challenges, resources, weekly]) => {
+      dataService.getInstructorsMatchingInterests(user),
+    ]).then(([plan, logs, challenges, resources, weekly, insts]) => {
       if (cancelled) return;
       setTasks(((plan as { todayTasks?: PlanTask[] })?.todayTasks) || []);
       setStreakDays(((plan as { streakDays?: number })?.streakDays) || 0);
@@ -176,12 +192,55 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
       setChallengeCount(challenges.length);
       setResourceCount(resources.length);
       setActivity(weekly);
+      setMatchedInstructors(insts);
       setLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [uid, user?.uid]);
+  }, [uid, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    Promise.all([
+      learningService.getSessions(user.uid).catch(() => ({} as Sessions)),
+      learningService.getTopicMastery(user.uid).catch(() => ({} as TopicMasteryMap)),
+    ]).then(([s, m]) => {
+      if (cancelled) return;
+      setSessions(s);
+      setMastery(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const resume = useMemo(() => latestSession(sessions), [sessions]);
+  const recommendations = useMemo(() => recommendTopics(mastery, misconceptions, user?.academicTier), [mastery, misconceptions, user?.academicTier]);
+
+  const startRecommendation = (r: Recommendation) => {
+    try {
+      sessionStorage.setItem(PENDING_PRACTICE_KEY, JSON.stringify({ subject: r.subject, topic: r.topic, focus: r.focus }));
+    } catch {
+      /* storage unavailable */
+    }
+    onNavigate("#ai-tutor");
+  };
+
+  const continueLearning = () => {
+    if (resume) {
+      if (resume.kind !== "diagnostic") {
+        try {
+          sessionStorage.setItem(RESUME_KEY, resume.kind === "mcq-test" ? "test" : "practice");
+        } catch {
+          /* storage unavailable */
+        }
+      }
+      onNavigate(describeSession(resume).hash);
+    } else if (recommendations[0]) startRecommendation(recommendations[0]);
+    else onNavigate(nextTask?.actionHash || "#diagnostic");
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -261,8 +320,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
       },
       {
         id: "mentors", title: "Mentor Sessions", category: "planning", hash: "#mentors",
-        description: "Book 1-on-1 help from an instructor.",
-        meta: "Browse instructors",
+        description: "Book 1-on-1 help from registered platform teachers matched to your system interests.",
+        meta: matchedInstructors.length ? `${matchedInstructors.length} registered teachers · ${matchedInstructors[0]?.matchScore || 98}% match` : "Browse registered teachers",
         bg: "#FDF0D1", accent: "#D99A07", icon: Briefcase,
       },
       {
@@ -393,7 +452,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
           </span>
           <div className={compact ? "min-w-0" : "mt-4"}>
             <h3 className="font-bold text-[16px] leading-snug text-[#1F2230]">{item.title}</h3>
-            {!compact && <p className="mt-1 text-[13px] leading-snug text-[#4B4E5C]">{item.description}</p>}
+            {!compact && <p className="adhd-hide mt-1 text-[13px] leading-snug text-[#4B4E5C]">{item.description}</p>}
             <p className={`${compact ? "mt-0.5" : "mt-3"} text-xs font-semibold`} style={{ color: item.accent }}>
               {item.meta}
             </p>
@@ -435,32 +494,38 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
         {/* Hero */}
         <section aria-labelledby="dash-heading" className="relative overflow-hidden rounded-[28px] bg-[#F8F2ED] md:min-h-[300px]">
           <div className="relative z-10 p-6 sm:p-9 md:max-w-[52%]">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E5D9FD] px-4 py-1.5 text-xs font-bold text-[#5B3FD0]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-4 py-1.5 text-xs font-bold text-brand-ink">
               <Flame className="w-3.5 h-3.5" />
               {loading ? "Loading your streak…" : streakDays > 0 ? `${streakDays}-day learning streak` : "Start your streak today"}
             </span>
             <h1 id="dash-heading" className="mt-4 font-display font-extrabold text-[30px] sm:text-[36px] leading-tight text-[#1F2230]">
               Welcome back, {firstName}!
             </h1>
-            <p className="relative inline-block mt-1 font-display font-extrabold text-[26px] sm:text-[32px] leading-tight text-[#02AE76]">
+            <p className="adhd-hide relative inline-block mt-1 font-display font-extrabold text-[26px] sm:text-[32px] leading-tight text-[#02AE76]">
               Ready to learn today?
               <svg aria-hidden="true" viewBox="0 0 300 12" preserveAspectRatio="none" className="absolute -bottom-1.5 left-0 w-[92%] h-2.5">
                 <path d="M3 9 Q 150 2 297 6" fill="none" stroke="#FEDB4A" strokeWidth="5" strokeLinecap="round" />
               </svg>
             </p>
-            <p className="mt-5 text-sm text-[#5B5E6B] leading-relaxed">
-              {loading
-                ? "Checking today's plan…"
-                : nextTask
-                ? <>Up next: <strong className="text-[#1F2230]">{nextTask.title}</strong> · {nextTask.duration}</>
-                : "You've finished today's tasks. Try a diagnostic challenge to keep sharp."}
+            <p className="adhd-clamp mt-5 text-sm text-[#5B5E6B] leading-relaxed">
+              {loading ? (
+                "Checking where you left off…"
+              ) : resume ? (
+                <>Pick up where you left off: <strong className="text-[#1F2230]">{describeSession(resume).title}</strong> · {describeSession(resume).detail}</>
+              ) : recommendations[0] ? (
+                <>Up next for you: <strong className="text-[#1F2230]">{recommendations[0].topic}</strong> · {recommendations[0].reason}</>
+              ) : nextTask ? (
+                <>Up next: <strong className="text-[#1F2230]">{nextTask.title}</strong> · {nextTask.duration}</>
+              ) : (
+                "You've finished today's tasks. Try a diagnostic challenge to keep sharp."
+              )}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button
-                onClick={() => onNavigate(nextTask?.actionHash || "#diagnostic")}
+                onClick={continueLearning}
                 className="h-11 px-5 rounded-full bg-[#0B0E13] text-white text-sm font-bold flex items-center gap-2 shadow-[0_3px_0_#1BBC7E] hover:bg-[#1BBC7E] hover:text-[#0B0E13] transition"
               >
-                {nextTask ? "Continue learning" : "Start a challenge"}
+                {resume ? "Continue learning" : recommendations[0] ? "Start learning" : "Start a challenge"}
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
@@ -477,6 +542,27 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
             className="w-full md:absolute md:right-0 md:bottom-0 md:w-auto md:h-[300px] md:max-w-[50%] object-contain object-right-bottom"
           />
         </section>
+
+        {recommendations.length > 0 && (
+          <section aria-labelledby="recommended-heading">
+            <h2 id="recommended-heading" className="mb-3 flex items-center gap-2 text-sm font-bold text-[#1F2230]">
+              <Flame className="w-4 h-4 text-[#F0506E]" /> Recommended for you
+            </h2>
+            <div className="grid gap-3 md:grid-cols-3">
+              {recommendations.map((r) => (
+                <button
+                  key={r.topicId}
+                  onClick={() => startRecommendation(r)}
+                  className="rounded-[20px] bg-white border border-black/5 p-4 text-left hover:border-brand hover:shadow-md transition"
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-brand-strong">{r.subject}</span>
+                  <span className="mt-0.5 block font-bold text-[#1F2230]">{r.topic}</span>
+                  <span className="adhd-hide mt-1 block text-xs text-[#5B5E6B] line-clamp-2">{r.reason}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Category tabs */}
         <div className="flex items-center gap-3">
@@ -498,7 +584,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
                   aria-controls="dash-activities"
                   onClick={() => setTab(t.id)}
                   className={`shrink-0 h-14 rounded-full flex items-center gap-3 pl-2 pr-6 text-sm font-semibold transition ${
-                    selected ? "bg-[#0B0E13] text-white" : "bg-[#F4EDE7] text-[#1F2230] hover:bg-[#EDE4DC]"
+                    selected ? "bg-[#0B0E13] text-white" : "bg-fill text-[#1F2230] hover:bg-fill-hover"
                   }`}
                 >
                   <span className={`w-10 h-10 rounded-full grid place-items-center ${selected ? "" : "bg-white shadow-sm"}`}>
@@ -515,7 +601,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
           <button
             onClick={scrollTabs}
             aria-label={tabsAtEnd ? "Scroll tabs back to start" : "Show more tabs"}
-            className="shrink-0 w-14 h-14 rounded-full bg-[#F4EDE7] hover:bg-[#EDE4DC] grid place-items-center transition"
+            className="shrink-0 w-14 h-14 rounded-full bg-fill hover:bg-fill-hover grid place-items-center transition"
           >
             {tabsAtEnd ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </button>
@@ -529,7 +615,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
             <div className="md:col-span-2 rounded-[24px] border-2 border-dashed border-black/10 p-10 text-center">
               <Star className="w-8 h-8 mx-auto text-[#F5B70A]" />
               <p className="mt-3 font-bold text-[#1F2230]">Nothing starred yet</p>
-              <p className="mt-1 text-sm text-[#5B5E6B]">Tap the star on any card to keep it here for quick access.</p>
+              <p className="adhd-hide mt-1 text-sm text-[#5B5E6B]">Tap the star on any card to keep it here for quick access.</p>
             </div>
           )}
         </div>
@@ -581,7 +667,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
                   <div className="flex items-center justify-between px-2 pb-2">
                     <span className="text-sm font-bold">Notifications</span>
                     {unread.length > 0 && (
-                      <button onClick={() => markRead(notifications.map((n) => n.id))} className="text-xs font-semibold text-[#6B4FD8] flex items-center gap-1 hover:underline">
+                      <button onClick={() => markRead(notifications.map((n) => n.id))} className="text-xs font-semibold text-brand-strong flex items-center gap-1 hover:underline">
                         <CheckCheck className="w-3.5 h-3.5" /> Mark all read
                       </button>
                     )}
@@ -619,29 +705,48 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
               <Avatar name={firstName} photoURL={user?.photoURL} className="w-24 h-24 text-3xl" />
             </div>
             <h2 className="mt-3 text-lg font-bold text-[#1F2230]">{user?.displayName || "Learner"}</h2>
-            <p className="text-xs text-[#5B5E6B]">{user?.institution || user?.email}</p>
+            <p className="adhd-hide text-xs text-[#5B5E6B]">{user?.institution || user?.email}</p>
           </div>
           <button
             onClick={() => onNavigate("#mentors")}
-            className="mt-5 w-full rounded-[20px] bg-white px-3 py-3 flex items-center gap-3 hover:shadow-md transition"
+            className="mt-5 w-full rounded-[20px] bg-white px-3.5 py-3 flex items-center gap-3 hover:shadow-md transition border border-black/5"
           >
-            <span className="w-10 h-10 rounded-full bg-[#EEE8FD] grid place-items-center text-[#5B3FD0]">
+            <span className="w-10 h-10 rounded-full bg-brand-soft grid place-items-center text-brand-ink shrink-0">
               <UserRound className="w-5 h-5" />
             </span>
-            <span className="flex-1 text-left text-sm font-semibold text-[#1F2230]">My mentors</span>
-            <span className="flex -space-x-2" aria-hidden="true">
-              <span className="w-7 h-7 rounded-full bg-[#D8CCFD] ring-2 ring-white" />
-              <span className="w-7 h-7 rounded-full bg-[#FDE9B0] ring-2 ring-white" />
-              <span className="w-7 h-7 rounded-full bg-[#F9B4BF] ring-2 ring-white" />
+            <div className="flex-1 text-left min-w-0">
+              <div className="text-xs font-bold text-[#1F2230] truncate">Mentor Sessions</div>
+              <div className="text-[11px] text-brand-ink font-semibold truncate">
+                {matchedInstructors.length > 0 ? `${matchedInstructors[0].name.split(' ')[1] || matchedInstructors[0].name} (${matchedInstructors[0].matchScore}% Match)` : "Registered Teachers"}
+              </div>
+            </div>
+            <span className="flex -space-x-2 shrink-0" aria-hidden="true">
+              {matchedInstructors.length > 0 ? (
+                matchedInstructors.slice(0, 3).map((inst) => (
+                  <img
+                    key={inst.id}
+                    src={inst.avatar}
+                    alt={inst.name}
+                    className="w-7 h-7 rounded-full object-cover ring-2 ring-white"
+                  />
+                ))
+              ) : (
+                <>
+                  <span className="w-7 h-7 rounded-full bg-[#D8CCFD] ring-2 ring-white" />
+                  <span className="w-7 h-7 rounded-full bg-[#FDE9B0] ring-2 ring-white" />
+                  <span className="w-7 h-7 rounded-full bg-[#F9B4BF] ring-2 ring-white" />
+                </>
+              )}
             </span>
-            <ChevronRight className="w-5 h-5 text-[#1F2230]" />
+            <ChevronRight className="w-5 h-5 text-[#1F2230] shrink-0" />
           </button>
+          <MentorPicker />
         </section>
 
         {/* Weekly activity */}
         <section aria-labelledby="activity-heading" className="rounded-[28px] bg-white border border-black/5 p-5">
           <div className="flex items-center gap-3">
-            <span className="w-11 h-11 rounded-2xl bg-[#EEE8FD] grid place-items-center text-[#6B4FD8]">
+            <span className="w-11 h-11 rounded-2xl bg-brand-soft grid place-items-center text-brand-strong">
               <CalendarDays className="w-5 h-5" />
             </span>
             <div className="flex-1 min-w-0">
@@ -653,14 +758,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
               id="activity-week"
               value={week}
               onChange={(e) => setWeek(e.target.value as "thisWeek" | "lastWeek")}
-              className="h-10 rounded-full border border-black/10 bg-white pl-3 pr-8 text-xs font-semibold text-[#1F2230] focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+              className="h-10 rounded-full border border-black/10 bg-white pl-3 pr-8 text-xs font-semibold text-[#1F2230] focus:outline-none focus:ring-2 focus:ring-brand"
             >
               <option value="thisWeek">This week</option>
               <option value="lastWeek">Last week</option>
             </select>
           </div>
           {activity?.isSample && (
-            <p className="mt-3 text-[11px] font-semibold text-[#8A6A00] bg-[#FFF4D6] rounded-full px-3 py-1 inline-block">
+            <p className="adhd-hide mt-3 text-[11px] font-semibold text-[#8A6A00] bg-[#FFF4D6] rounded-full px-3 py-1 inline-block">
               Sample data. Activity tracking starts once you study.
             </p>
           )}
@@ -679,7 +784,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
               </div>
             ))}
           </div>
-          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
+          <div className="adhd-hide mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
             {ACTIVITY_SEGMENTS.map((seg) => (
               <span key={seg.key} className="flex items-center gap-1.5 text-[11px] text-[#5B5E6B]">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: seg.color }} />

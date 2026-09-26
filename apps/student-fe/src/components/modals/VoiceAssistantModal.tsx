@@ -1,6 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Mic, MicOff, Volume2, X, Sparkles, Command, ArrowRight } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Mic, MicOff, X, Sparkles, SendHorizontal, AlertCircle } from "lucide-react";
 import { useThemeMode } from "../../context/ThemeModeContext";
+import { useAuth } from "../../context/AuthContext";
+import {
+  COURSE_FILTER_EVENT,
+  COURSE_FILTER_KEY,
+  HELP_LINES,
+  SAMPLE_COMMANDS,
+  VOICE_HINT_EVENT,
+  VOICE_HINT_KEY,
+  parseVoiceCommand,
+} from "../../services/voiceCommands";
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -8,179 +18,175 @@ interface VoiceAssistantModalProps {
   onNavigate: (hash: string) => void;
 }
 
-export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
-  isOpen,
-  onClose,
-  onNavigate,
-}) => {
+const MIC_ERRORS: Record<string, string> = {
+  network:
+    "Voice recognition needs an internet connection to your browser's speech service, and it couldn't be reached. Type your command below instead.",
+  "not-allowed": "Microphone access was blocked. Allow it from the lock icon in the address bar, or type your command below.",
+  "service-not-allowed": "This browser doesn't allow speech recognition here. Type your command below instead.",
+  "no-speech": "I didn't hear anything. Tap the mic and try again, or type your command below.",
+  "audio-capture": "No microphone was found. Connect one, or type your command below.",
+  "language-not-supported": "Speech recognition isn't available for English on this browser. Type your command below instead.",
+};
+
+const getRecognitionCtor = (): any =>
+  typeof window === "undefined" ? null : (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+
+export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClose, onNavigate }) => {
   const { speak } = useThemeMode();
+  const { role, switchRole } = useAuth();
+  const currentRole: "student" | "teacher" = role === "teacher" ? "teacher" : "student";
+
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [assistantResponse, setAssistantResponse] = useState<string>(
-    "I'm listening! Speak commands like 'go to diagnostic', 'show courses', 'adaptive pacing', or 'help'."
-  );
+  const [typed, setTyped] = useState("");
+  const [reply, setReply] = useState("Tap the mic and say a command, or type one below. Say \"help\" to see what I can do.");
+  const [showHelp, setShowHelp] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  const closeTimer = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const micSupported = !!getRecognitionCtor();
 
-  // Esc key dismissal
+  const stopRecognition = () => {
+    const rec = recognitionRef.current;
+    recognitionRef.current = null;
+    if (rec) {
+      rec.onresult = rec.onerror = rec.onend = null;
+      try {
+        rec.abort();
+      } catch {
+        // already stopped
+      }
+    }
+    setIsListening(false);
+  };
+
+  // Reset on open, clean up on close/unmount.
+  useEffect(() => {
+    if (isOpen) {
+      setTranscript("");
+      setTyped("");
+      setShowHelp(false);
+      setMicError(micSupported ? null : "Speech recognition isn't supported in this browser. Type your command below instead.");
+      setReply("Tap the mic and say a command, or type one below. Say \"help\" to see what I can do.");
+    }
+    return () => {
+      stopRecognition();
+      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
+      if (e.key === "Escape" && isOpen) onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Setup Web Speech API SpeechRecognition
-  useEffect(() => {
-    if (typeof window !== "undefined" && isOpen) {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const runCommand = useCallback(
+    (text: string) => {
+      const { reply: message, action } = parseVoiceCommand(text, currentRole);
+      setReply(message);
+      setShowHelp(action.type === "help");
+      speak(message);
 
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.lang = "en-US";
+      const finish = (hash: string) => {
+        if (closeTimer.current) window.clearTimeout(closeTimer.current);
+        closeTimer.current = window.setTimeout(() => {
+          onNavigate(hash);
+          onClose();
+        }, 900);
+      };
 
-        recognition.onstart = () => {
-          setIsListening(true);
-        };
-
-        recognition.onresult = (event: any) => {
-          const current = event.resultIndex;
-          const text = event.results[current][0].transcript;
-          setTranscript(text);
-          if (event.results[current].isFinal) {
-            handleVoiceCommand(text);
+      switch (action.type) {
+        case "navigate":
+          finish(action.hash);
+          break;
+        case "hint":
+          try {
+            sessionStorage.setItem(VOICE_HINT_KEY, "1");
+          } catch {
+            // storage unavailable: the event below still covers an open diagnostic page
           }
-        };
-
-        recognition.onerror = (event: any) => {
-          setIsListening(false);
-          if (event.error === 'not-allowed') {
-            setAssistantResponse("Microphone access was denied. Please click the lock icon in your browser URL bar to allow microphone access.");
-          } else if (event.error === 'no-speech') {
-            setAssistantResponse("No speech was detected. Please check your microphone settings and try again.");
-          } else {
-            setAssistantResponse(`Microphone error (${event.error || 'unknown'}). Please try speaking again or click a sample command.`);
+          window.dispatchEvent(new CustomEvent(VOICE_HINT_EVENT));
+          finish("#diagnostic");
+          break;
+        case "filter":
+          try {
+            sessionStorage.setItem(COURSE_FILTER_KEY, JSON.stringify(action.request));
+          } catch {
+            // storage unavailable
           }
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-        };
-
-        recognitionRef.current = recognition;
-        // Removed auto-start to prevent browser permission blocks.
-        // Users must explicitly click the microphone to begin listening.
-      } else {
-        setAssistantResponse("Web Speech Recognition API is not supported in this browser environment. You can test sample commands below!");
+          window.dispatchEvent(new CustomEvent(COURSE_FILTER_EVENT, { detail: action.request }));
+          finish("#courses");
+          break;
+        case "role":
+          switchRole(action.role).catch(() => setReply("I couldn't switch views just now. Try again from Settings."));
+          finish(action.role === "teacher" ? "#teacher" : "#student");
+          break;
+        default:
+          break;
       }
-    }
+    },
+    [currentRole, onClose, onNavigate, speak, switchRole]
+  );
 
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // ignore
-        }
+  const startListening = () => {
+    const Ctor = getRecognitionCtor();
+    if (!Ctor) return;
+    stopRecognition();
+    setTranscript("");
+    setMicError(null);
+
+    const rec = new Ctor();
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.lang = "en-US";
+    let finalText = "";
+    let failed = false;
+
+    rec.onresult = (event: any) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const piece = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += piece;
+        else interim += piece;
       }
+      setTranscript((finalText + interim).trim());
     };
-  }, [isOpen]);
+    rec.onerror = (event: any) => {
+      failed = true;
+      if (event.error === "aborted") return;
+      setMicError(MIC_ERRORS[event.error] || `The microphone stopped (${event.error || "unknown error"}). Type your command below instead.`);
+      inputRef.current?.focus();
+    };
+    rec.onend = () => {
+      recognitionRef.current = null;
+      setIsListening(false);
+      if (!failed && finalText.trim()) runCommand(finalText.trim());
+    };
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      setTranscript("");
-      try {
-        recognitionRef.current.start();
-      } catch {
-        // ignore
-      }
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+      setIsListening(true);
+    } catch {
+      recognitionRef.current = null;
+      setMicError("The microphone couldn't start. Type your command below instead.");
     }
   };
 
-  const handleVoiceCommand = (cmd: string) => {
-    const lower = cmd.toLowerCase().trim();
+  const toggleListening = () => (isListening ? recognitionRef.current?.stop() : startListening());
 
-    if (lower.includes("diagnostic") || lower.includes("test") || lower.includes("quiz") || lower.includes("nav:diagnostic")) {
-      const resp = "Navigating to LearnLens AI Diagnostic Loop.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#diagnostic");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("library") || lower.includes("resource") || lower.includes("material") || lower.includes("nav:library")) {
-      const resp = "Opening Vetted Educational Resource Library.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#library");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("hint") || lower.includes("give me a hint") || lower.includes("stuck") || lower.includes("scaffold")) {
-      const resp = "Opening AI Diagnostic scaffolded hints: Tier 1 Nudge, Tier 2 Formula Scaffold, and Tier 3 Structural Guidance are available.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#diagnostic");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("course") || lower.includes("curriculum") || lower.includes("syllabus") || lower.includes("filter:")) {
-      const resp = "Opening Curriculum Explorer and Courses.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#courses");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("pacing") || lower.includes("speed") || lower.includes("nav:pacing") || lower.includes("simulator")) {
-      const resp = "Launching Intelligent Adaptive Pacing & Laboratory Modules.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#pacing");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("teacher") || lower.includes("cohort") || lower.includes("toggle:teacher") || lower.includes("heatmap") || lower.includes("rag")) {
-      const resp = "Opening Teacher Cohort Intelligence & RAG Chatbot.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#teacher");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("mentor") || lower.includes("instructor") || lower.includes("faculty")) {
-      const resp = "Viewing Faculty and Subject-Matter Experts.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#mentors");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("path") || lower.includes("journey") || lower.includes("stage")) {
-      const resp = "Opening 5-Stage Learning Progression Path.";
-      setAssistantResponse(resp);
-      speak(resp);
-      setTimeout(() => {
-        onNavigate("#paths");
-        onClose();
-      }, 1000);
-    } else if (lower.includes("help")) {
-      const resp = "Voice commands available: 'diagnostic', 'give me a hint', 'library', 'curriculum', 'adaptive pacing', 'learning paths', 'teacher cohort', and 'mentors'.";
-      setAssistantResponse(resp);
-      speak(resp);
-    } else {
-      const resp = `Heard: "${cmd}". Try saying 'go to diagnostic' or click one of the quick command buttons below.`;
-      setAssistantResponse(resp);
-      speak(resp);
-    }
+  const submitTyped = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = typed.trim();
+    if (!text) return;
+    setTranscript(text);
+    setTyped("");
+    runCommand(text);
   };
 
   if (!isOpen) return null;
@@ -191,83 +197,109 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-white dark:bg-[#1E1E24] rounded-3xl p-6 sm:p-8 shadow-2xl border border-black/10 dark:border-white/10 overflow-hidden transform animate-in zoom-in-95 duration-150"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="voice-assistant-title"
+        className="relative w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-black/10 overflow-hidden transform animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/10">
+        <div className="flex items-center justify-between pb-4 border-b border-black/5">
           <div className="flex items-center space-x-2">
-            <div className="p-2 rounded-xl bg-[#8266F0]/15 text-[#8266F0]">
+            <div className="p-2 rounded-xl bg-brand-soft text-brand">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-[#141414] dark:text-white">
+              <h3 id="voice-assistant-title" className="font-display font-bold text-lg text-[#141414]">
                 LearnLens Voice Assistant
               </h3>
-              <p className="text-xs text-[#6B6B6B] dark:text-slate-400">
-                Cartesia Sonic AI • Natural Voice Commands
-              </p>
+              <p className="text-xs text-[#6B6B6B] adhd-hide">Voice or typed commands</p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-[#141414] dark:hover:text-white hover:bg-black/5 transition"
+            aria-label="Close voice assistant"
+            className="p-2 rounded-xl text-slate-400 hover:text-[#141414] hover:bg-black/5 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Mic Visualizer Center */}
-        <div className="my-8 flex flex-col items-center justify-center text-center">
+        <div className="my-6 flex flex-col items-center justify-center text-center">
           <button
             onClick={toggleListening}
-            className={`relative p-6 rounded-full transition-all duration-300 transform active:scale-95 ${
-              isListening
-                ? "bg-rose-500 text-white shadow-xl shadow-rose-500/30 scale-110"
-                : "bg-[#8266F0] text-white shadow-lg shadow-[#8266F0]/30 hover:scale-105"
+            disabled={!micSupported}
+            className={`relative p-6 rounded-full transition-all duration-300 transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+              isListening ? "bg-rose-500 text-white shadow-xl shadow-rose-500/30 scale-110" : "bg-brand text-white shadow-lg shadow-brand/30 hover:scale-105"
             }`}
-            aria-label={isListening ? "Stop listening" : "Start speech listening"}
+            aria-label={isListening ? "Stop listening" : "Start listening"}
           >
             {isListening ? <Mic className="w-8 h-8 animate-pulse" /> : <MicOff className="w-8 h-8" />}
-            {isListening && (
-              <span className="absolute -inset-2 rounded-full border-2 border-rose-500/40 animate-ping pointer-events-none" />
-            )}
+            {isListening && <span className="absolute -inset-2 rounded-full border-2 border-rose-500/40 animate-ping pointer-events-none" />}
           </button>
 
           <div className="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            {isListening ? "Listening now... speak your command" : "Click to speak"}
+            {!micSupported ? "Microphone unavailable" : isListening ? "Listening... speak your command" : "Tap to speak"}
           </div>
 
           {transcript && (
-            <p className="mt-3 text-sm font-medium text-[#8266F0] bg-[#8266F0]/10 px-4 py-2 rounded-xl">
+            <p data-testid="voice-transcript" className="mt-3 text-sm font-medium text-brand-ink bg-brand-soft px-4 py-2 rounded-xl">
               &ldquo;{transcript}&rdquo;
             </p>
           )}
 
-          <p className="mt-4 text-sm text-[#141414] dark:text-slate-200 bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/10 leading-relaxed max-w-md">
-            {assistantResponse}
-          </p>
+          {micError && (
+            <p role="alert" className="mt-3 flex items-start gap-2 text-left text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl max-w-md">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{micError}</span>
+            </p>
+          )}
+
+          <div
+            data-testid="voice-reply"
+            aria-live="polite"
+            className="mt-4 text-sm text-[#141414] bg-fill p-4 rounded-2xl border border-black/5 leading-relaxed max-w-md w-full text-left"
+          >
+            <p>{reply}</p>
+            {showHelp && (
+              <ul className="mt-2 space-y-1 list-disc pl-5 text-xs text-[#4A4A4A]">
+                {HELP_LINES.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
-        {/* Sample Trigger Pills */}
-        <div className="pt-4 border-t border-black/5 dark:border-white/10">
-          <span className="text-[11px] font-semibold text-[#6B6B6B] dark:text-slate-400 uppercase tracking-wider block mb-2">
-            Sample Voice Commands:
-          </span>
+        <form onSubmit={submitTyped} className="flex items-center gap-2 mb-4">
+          <input
+            ref={inputRef}
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder="Type a command, e.g. open library"
+            aria-label="Type a command"
+            className="flex-1 min-w-0 text-sm px-3 py-2.5 rounded-xl bg-fill border border-black/10 focus:outline-none focus:ring-2 focus:ring-brand/40"
+          />
+          <button
+            type="submit"
+            aria-label="Run command"
+            disabled={!typed.trim()}
+            className="p-2.5 rounded-xl bg-brand text-white hover:bg-brand-strong disabled:opacity-40 transition"
+          >
+            <SendHorizontal className="w-4 h-4" />
+          </button>
+        </form>
+
+        <div className="pt-4 border-t border-black/5">
+          <span className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider block mb-2">Sample commands</span>
           <div className="flex flex-wrap gap-2">
-            {[
-              "nav:diagnostic",
-              "give me a hint",
-              "nav:library",
-              "filter:class 9",
-              "nav:pacing",
-              "toggle:teacher",
-              "help",
-            ].map((cmd) => (
+            {SAMPLE_COMMANDS.map((cmd) => (
               <button
                 key={cmd}
-                onClick={() => handleVoiceCommand(cmd)}
-                className="text-xs font-mono font-medium px-2.5 py-1 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-[#8266F0]/15 hover:text-[#8266F0] transition"
+                onClick={() => {
+                  setTranscript(cmd);
+                  runCommand(cmd);
+                }}
+                className="text-xs font-mono font-medium px-2.5 py-1 rounded-lg bg-fill-2 hover:bg-brand-soft hover:text-brand-ink transition"
               >
                 {cmd}
               </button>

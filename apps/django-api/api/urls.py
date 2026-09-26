@@ -13,6 +13,8 @@ from api.views import (
     CartesiaTTSProxyView,
 )
 from api.tutor import TutorChatView, TutorTestGenerateView, TutorTestAnalyzeView
+from api.tutor_open import OpenProblemGenerateView, OpenProblemEvaluateView
+from api.teacher_insights import TeacherInsightsAskView
 
 app_name = "api"
 
@@ -28,4 +30,7 @@ urlpatterns = [
     path("tutor/chat/", TutorChatView.as_view(), name="tutor-chat"),
     path("tutor/test/generate/", TutorTestGenerateView.as_view(), name="tutor-test-generate"),
     path("tutor/test/analyze/", TutorTestAnalyzeView.as_view(), name="tutor-test-analyze"),
+    path("tutor/open/generate/", OpenProblemGenerateView.as_view(), name="tutor-open-generate"),
+    path("tutor/open/evaluate/", OpenProblemEvaluateView.as_view(), name="tutor-open-evaluate"),
+    path("teacher/insights/ask/", TeacherInsightsAskView.as_view(), name="teacher-insights-ask"),
 ]

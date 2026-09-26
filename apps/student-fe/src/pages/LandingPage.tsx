@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowRight, Play, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowRight, Play, Volume2, VolumeX, X, Check, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useThemeMode } from "../context/ThemeModeContext";
 
 interface LandingPageProps {
@@ -240,14 +240,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               }`}
             >
               <span>x = 2 (Correct Root)</span>
-              <span className="text-xs opacity-75" aria-hidden="true">✓</span>
+              <Check className="w-4 h-4 opacity-75" aria-hidden="true" />
             </button>
           </div>
 
           {demoSelectedOption === "misstep" && (
             <div className="mt-4 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-xs animate-in fade-in">
               <strong className="text-rose-700 dark:text-rose-400 block mb-1">
-                ⚠️ Sign Inversion Detected:
+                <AlertTriangle className="inline w-4 h-4 -mt-0.5 mr-1" aria-hidden="true" />Sign Inversion Detected:
               </strong>
               <p className="text-neutral-700 dark:text-neutral-300">
                 Multiplying -2 by -9 yields <strong>+18</strong>, not -18. Debt cancellation rule: subtracting negative units adds positive value!
@@ -258,7 +258,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           {demoSelectedOption === "correct" && (
             <div className="mt-4 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-xs animate-in fade-in">
               <strong className="text-emerald-700 dark:text-emerald-400 block mb-1">
-                ✓ Correct Algebraic Expansion:
+                <CheckCircle2 className="inline w-4 h-4 -mt-0.5 mr-1" aria-hidden="true" />Correct Algebraic Expansion:
               </strong>
               <p className="text-neutral-700 dark:text-neutral-300">
                 -2x + 18 = 14 &rarr; -2x = -4 &rarr; x = 2. Check: -2(2 - 9) = -2(-7) = 14.

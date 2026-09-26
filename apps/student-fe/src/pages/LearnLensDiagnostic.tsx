@@ -18,6 +18,7 @@ import { useAuth } from "../context/AuthContext";
 import { ADHDDiagnosticView } from "./ADHDDiagnosticView";
 import { DyslexicDiagnosticView } from "./DyslexicDiagnosticView";
 import { InteractiveMindMap } from "../components/InteractiveMindMap";
+import { VOICE_HINT_EVENT, VOICE_HINT_KEY } from "../services/voiceCommands";
 import {
   StepCard,
   PhaseChip,
@@ -27,6 +28,7 @@ import {
   MistakeMemoryPanel,
 } from "../components/diagnostic/DiagnosticTemplate";
 import { dataService, LearnerModelState } from "../services/dataService";
+import { learningService } from "../services/learningService";
 import {
   ConceptChallenge,
   DiagnosticOption,
@@ -86,6 +88,21 @@ export const LearnLensDiagnostic: React.FC = () => {
   const [challenges, setChallenges] = useState<ConceptChallenge[]>([]);
   const [resources, setResources] = useState<EducationalResource[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  // A voice "give me a hint" opens the question step with the first hint already shown.
+  const [voiceHint] = useState(() => {
+    try {
+      return !!sessionStorage.getItem(VOICE_HINT_KEY);
+    } catch {
+      return false;
+    }
+  });
+  const [arrivedViaDeepLink] = useState(() => {
+    try {
+      return voiceHint || !!sessionStorage.getItem(PENDING_CHALLENGE_KEY);
+    } catch {
+      return false;
+    }
+  });
   // Initialisers must stay pure (Strict Mode runs them twice), so the key is cleared in an effect.
   const [selectedChallengeId, setSelectedChallengeId] = useState<string>(() => {
     try {
@@ -97,6 +114,7 @@ export const LearnLensDiagnostic: React.FC = () => {
   useEffect(() => {
     try {
       sessionStorage.removeItem(PENDING_CHALLENGE_KEY);
+      sessionStorage.removeItem(VOICE_HINT_KEY);
     } catch {
       /* storage unavailable */
     }
@@ -105,7 +123,7 @@ export const LearnLensDiagnostic: React.FC = () => {
   const [stage, setStage] = useState(0);
   const [selectedOption, setSelectedOption] = useState<DiagnosticOption | null>(null);
   const [verificationAnswer, setVerificationAnswer] = useState<string | null>(null);
-  const [hintTier, setHintTier] = useState(0);
+  const [hintTier, setHintTier] = useState(voiceHint ? 1 : 0);
   const [showMindMap, setShowMindMap] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -152,8 +170,69 @@ export const LearnLensDiagnostic: React.FC = () => {
     };
   }, [user]);
 
+  // Saving stays off until the restore has finished, otherwise the initial "no progress" state
+  // would overwrite the saved session before it is read.
+  const restoreStartedRef = useRef(false);
+  const restoredRef = useRef(false);
+  const [restoreDone, setRestoreDone] = useState(false);
+  useEffect(() => {
+    if (!user || loadingData || restoreStartedRef.current) return;
+    restoreStartedRef.current = true;
+    const finish = () => {
+      restoredRef.current = true;
+      setRestoreDone(true);
+    };
+    if (arrivedViaDeepLink) {
+      finish();
+      return;
+    }
+    learningService
+      .getSessions(user.uid)
+      .then(({ diagnostic }) => {
+        const ch = diagnostic && challenges.find((c) => c.id === diagnostic.challengeId);
+        if (!diagnostic || !ch) return;
+        setSelectedChallengeId(ch.id);
+        setSelectedOption(ch.options.find((o) => o.id === diagnostic.selectedOptionId) || null);
+        setVerificationAnswer(diagnostic.verificationAnswer);
+        setStage(diagnostic.stage);
+      })
+      .catch((err) => console.warn("[Diagnostic] Could not restore session:", err))
+      .finally(finish);
+  }, [user, loadingData, challenges, arrivedViaDeepLink]);
+
   const activeChallenge: ConceptChallenge | undefined =
     challenges.find((c) => c.id === selectedChallengeId) || challenges[0];
+
+  // Continue Learning: an unfinished loop (steps 2-4) is saved; finishing or restarting clears it.
+  useEffect(() => {
+    if (!user || !activeChallenge || !restoredRef.current) return;
+    const inProgress = stage >= 1 && stage <= 3;
+    learningService
+      .saveSession(
+        user.uid,
+        "diagnostic",
+        inProgress
+          ? {
+              kind: "diagnostic",
+              challengeId: activeChallenge.id,
+              topic: activeChallenge.topic,
+              stage,
+              selectedOptionId: selectedOption?.id || null,
+              verificationAnswer,
+              updatedAt: new Date().toISOString(),
+            }
+          : null
+      )
+      .catch((err) => console.warn("[Diagnostic] Could not save session:", err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, selectedOption, verificationAnswer, activeChallenge?.id, restoreDone]);
+
+  const recordEvidence = (correct: boolean) => {
+    if (!user || !activeChallenge) return;
+    learningService
+      .recordTopicEvidence(user.uid, activeChallenge.topic, activeChallenge.discipline, [correct])
+      .catch((err) => console.warn("[Diagnostic] Could not update topic mastery:", err));
+  };
 
   useEffect(() => {
     timerRef.current = Date.now();
@@ -238,6 +317,7 @@ export const LearnLensDiagnostic: React.FC = () => {
     setSelectedOption(opt);
     setSubmitting(true);
     const timeMs = Date.now() - timerRef.current;
+    recordEvidence(opt.isCorrect);
     const retention = await submitToBackend(opt.label.replace(/^[a-z]\s*=\s*/i, "").trim(), timeMs);
 
     if (opt.isCorrect) {
@@ -285,6 +365,7 @@ export const LearnLensDiagnostic: React.FC = () => {
     const opt = activeChallenge.verification.options.find((o) => o.id === optId);
     if (!opt) return;
     setVerificationAnswer(optId);
+    recordEvidence(opt.isCorrect);
     const misconception = selectedOption?.misconceptionTitle || memoryRef.current.find((r) => r.conceptId === activeChallenge.id)?.identifiedMisconception;
     if (opt.isCorrect) {
       const hadMisconception = conceptState.misconceptionActive;
@@ -323,6 +404,22 @@ export const LearnLensDiagnostic: React.FC = () => {
     handleReset();
   };
 
+  // Voice hint while this page is already open: reveal the next hint (the page doesn't remount).
+  useEffect(() => {
+    const onVoiceHint = () => {
+      try {
+        sessionStorage.removeItem(VOICE_HINT_KEY);
+      } catch {
+        /* storage unavailable */
+      }
+      if (stage === 0) setHintTier((h) => Math.min(3, h + 1));
+      else showToast("Hints are on the question step", "Start the challenge again to use hints.", "info");
+    };
+    window.addEventListener(VOICE_HINT_EVENT, onVoiceHint);
+    return () => window.removeEventListener(VOICE_HINT_EVENT, onVoiceHint);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+
   const nextChallenge = () => {
     if (!activeChallenge || challenges.length === 0) return;
     const idx = challenges.findIndex((c) => c.id === activeChallenge.id);
@@ -344,7 +441,7 @@ export const LearnLensDiagnostic: React.FC = () => {
   if (loadingData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-[#8266F0]" />
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
         <p className="text-sm font-semibold text-neutral-500">Loading your diagnostic…</p>
       </div>
     );
@@ -363,6 +460,23 @@ export const LearnLensDiagnostic: React.FC = () => {
   if (mode === "adhd" || mode === "dyslexic") {
     const View = mode === "adhd" ? ADHDDiagnosticView : DyslexicDiagnosticView;
     return (
+      <>
+      {stage === 0 && hintTier > 0 && (
+        <div className="max-w-3xl mx-auto mt-4 px-4">
+          <div className="rounded-2xl bg-[#FFF7E6] border border-[#F6DFA5] p-4">
+            <span className="flex items-center gap-2 text-xs font-bold text-[#7C5300]">
+              <Lightbulb className="w-4 h-4" /> Hints ({hintTier}/3 used)
+            </span>
+            <ul className="mt-2 space-y-1.5">
+              {activeChallenge.hints.slice(0, hintTier).map((h) => (
+                <li key={h.tier} className="text-sm text-[#3D3522]">
+                  <strong>{h.tierName}:</strong> {h.content}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
       <View
         currentStage={stage}
         equation={activeChallenge.equationOrPrompt}
@@ -376,6 +490,7 @@ export const LearnLensDiagnostic: React.FC = () => {
         onReset={handleReset}
         elapsedSeconds={(elapsedMs / 1000).toFixed(1)}
       />
+      </>
     );
   }
 
@@ -393,11 +508,11 @@ export const LearnLensDiagnostic: React.FC = () => {
       : text.length <= 40
       ? "text-center font-bold text-2xl sm:text-3xl tracking-wide whitespace-pre-wrap"
       : "text-left text-base sm:text-lg font-semibold leading-relaxed";
-    return <div className={`rounded-2xl border border-black/5 bg-[#EFEFEE] px-5 py-6 text-[#141414] ${style}`}>{text}</div>;
+    return <div className={`rounded-2xl border border-black/5 bg-fill-2 px-5 py-6 text-[#141414] ${style}`}>{text}</div>;
   };
 
-  const primaryBtn = "h-11 px-6 rounded-full bg-[#8266F0] hover:bg-[#6F52E6] text-white text-sm font-bold flex items-center gap-2 transition";
-  const secondaryBtn = "h-11 px-6 rounded-full bg-[#E6E6E4] hover:bg-[#DADAD8] text-[#141414] text-sm font-semibold flex items-center gap-2 transition";
+  const primaryBtn = "h-11 px-6 rounded-full bg-brand hover:bg-brand-strong text-white text-sm font-bold flex items-center gap-2 transition";
+  const secondaryBtn = "h-11 px-6 rounded-full bg-fill-2 hover:bg-fill-hover text-[#141414] text-sm font-semibold flex items-center gap-2 transition";
 
   const renderStage = () => {
     if (stage === 0) {
@@ -516,14 +631,14 @@ export const LearnLensDiagnostic: React.FC = () => {
             <PhaseChip tone="amber" icon={BookOpen}>Micro-Lesson</PhaseChip>
             <button
               onClick={() => speak(activeChallenge.microLesson.voiceScript)}
-              className="h-8 px-3 rounded-full bg-[#EDEDEC] hover:bg-[#E2E2E0] text-xs font-semibold flex items-center gap-1.5 transition"
+              className="h-8 px-3 rounded-full bg-fill-2 hover:bg-fill-hover text-xs font-semibold flex items-center gap-1.5 transition"
             >
               <Volume2 className="w-3.5 h-3.5" /> Read aloud
             </button>
           </div>
           <h2 className="font-display text-2xl font-bold text-[#141414]">{activeChallenge.microLesson.title}</h2>
-          <div className="rounded-2xl bg-[#F3F0FF] px-5 py-6 text-center">
-            <div className="font-mono text-2xl sm:text-3xl font-bold text-[#5B3FD0]">{activeChallenge.microLesson.ruleName}</div>
+          <div className="rounded-2xl bg-brand-faint px-5 py-6 text-center">
+            <div className="font-mono text-2xl sm:text-3xl font-bold text-brand-ink">{activeChallenge.microLesson.ruleName}</div>
             <p className="mt-3 text-sm text-[#4B4B4B] max-w-lg mx-auto">{activeChallenge.microLesson.analogySummary}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -539,10 +654,10 @@ export const LearnLensDiagnostic: React.FC = () => {
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between rounded-2xl border border-[#E3E3E1] px-4 py-3 text-sm hover:border-[#8266F0] transition"
+                  className="flex items-center justify-between rounded-2xl border border-[#E3E3E1] px-4 py-3 text-sm hover:border-brand transition"
                 >
                   <span className="font-semibold truncate">{r.title}</span>
-                  <ExternalLink className="w-4 h-4 text-[#8266F0] shrink-0" />
+                  <ExternalLink className="w-4 h-4 text-brand shrink-0" />
                 </a>
               ))}
             </div>
@@ -631,7 +746,7 @@ export const LearnLensDiagnostic: React.FC = () => {
             Try Another Problem
           </button>
           <button onClick={() => (window.location.hash = "#pacing")} className={secondaryBtn}>
-            View Updated Pacing Track →
+            View Updated Pacing Track <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -656,7 +771,7 @@ export const LearnLensDiagnostic: React.FC = () => {
               aria-checked={selected}
               onClick={() => switchChallenge(ch.id)}
               className={`shrink-0 h-9 px-4 rounded-full text-xs font-semibold transition ${
-                selected ? "bg-[#141414] text-white" : "bg-[#EDEDEC] text-[#1F1F1F] hover:bg-[#E2E2E0]"
+                selected ? "bg-[#141414] text-white" : "bg-fill-2 text-[#1F1F1F] hover:bg-fill-hover"
               }`}
             >
               {ch.topic} · {ch.gradeLevel}
@@ -677,7 +792,7 @@ export const LearnLensDiagnostic: React.FC = () => {
                 onClick={() => setShowMindMap((v) => !v)}
                 aria-pressed={showMindMap}
                 className={`h-9 px-3.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition ${
-                  showMindMap ? "bg-[#8266F0] text-white" : "bg-[#EDEDEC] hover:bg-[#E2E2E0] text-[#1F1F1F]"
+                  showMindMap ? "bg-brand text-white" : "bg-fill-2 hover:bg-fill-hover text-[#1F1F1F]"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />

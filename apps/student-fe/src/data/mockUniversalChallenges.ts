@@ -52,8 +52,8 @@ export const UNIVERSAL_CHALLENGES: ConceptChallenge[] = [
       title: "Debt Cancellation: Why − × − Is +",
       ruleName: "−3 × (−4) = +12",
       analogySummary: "Taking away 3 debts of ₹4 each leaves you ₹12 better off. Removing a negative is a gain.",
-      failurePoint: "-3(x - 4) → -3x - 12  ✗",
-      correctPath: "-3(x - 4) → -3x + 12  ✓",
+      failurePoint: "-3(x - 4) → -3x - 12",
+      correctPath: "-3(x - 4) → -3x + 12",
       voiceScript:
         "When a negative number multiplies a negative number, the result is positive. Think of it as removing debts: taking away three debts of four rupees each leaves you twelve rupees better off. So negative three times negative four is positive twelve.",
     },
@@ -118,8 +118,8 @@ export const UNIVERSAL_CHALLENGES: ConceptChallenge[] = [
       title: "Every Iteration Must Shrink the Range",
       ruleName: "lo = mid + 1",
       analogySummary: "Like hunting for a page in a book: if you never move past the page you just checked, you'll check it forever.",
-      failurePoint: "lo = mid → the range can stay the same size  ✗",
-      correctPath: "lo = mid + 1 → the range shrinks every step  ✓",
+      failurePoint: "lo = mid → the range can stay the same size",
+      correctPath: "lo = mid + 1 → the range shrinks every step",
       voiceScript:
         "A binary search only terminates if every iteration makes the search range smaller. When mid equals lo, setting lo to mid changes nothing. Setting lo to mid plus one guarantees progress.",
     },
@@ -183,8 +183,8 @@ export const UNIVERSAL_CHALLENGES: ConceptChallenge[] = [
       title: "Line Up the Places",
       ruleName: "0.4 = 0.400",
       analogySummary: "Think in money: ₹0.40 is 40 paise and ₹0.35 is 35 paise. Extra digits don't add value on their own.",
-      failurePoint: "0.125 > 0.4 because it has more digits  ✗",
-      correctPath: "0.400 > 0.125: compare tenths first  ✓",
+      failurePoint: "0.125 > 0.4 because it has more digits",
+      correctPath: "0.400 > 0.125: compare tenths first",
       voiceScript:
         "To compare decimals, line up the decimal points and compare the tenths first. Zero point four is four tenths, which is more than one tenth, so it is bigger than zero point one two five.",
     },

@@ -11,7 +11,14 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.cdnfonts.com/css/open-dyslexic" rel="stylesheet">
   </head>
-  <body class="bg-[#EFEFEE] text-[#141414] antialiased selection:bg-[#8266F0] selection:text-white transition-colors duration-200">
+  <body class="bg-fill-2 text-[#141414] antialiased selection:bg-brand selection:text-white transition-colors duration-200">
+    <script>
+      // Apply the saved reading mode before the app renders, so ADHD/dyslexic colours don't flash.
+      try {
+        var m = localStorage.getItem("eduvia_theme_mode");
+        if (m === "adhd" || m === "dyslexic") document.body.classList.add("mode-" + m);
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

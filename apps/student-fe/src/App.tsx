@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Navbar } from "./components/Navbar";
-import { StudentShell } from "./components/StudentShell";
-import { ModeToggleWidget } from "./components/ModeToggleWidget";
+import { AppShell } from "./components/AppShell";
 import { ReadingRuler } from "./components/ReadingRuler";
 import { LandingPage } from "./pages/LandingPage";
 import { LearnLensDiagnostic } from "./pages/LearnLensDiagnostic";
@@ -30,7 +29,7 @@ import { Info, CheckCircle2, AlertTriangle, X } from "lucide-react";
 export const App: React.FC = () => {
   const { toast, dismissToast } = useThemeMode();
   const { isAuthenticated, role } = useAuth();
-  const isStudentShell = isAuthenticated && role === "student";
+
 
   // Route State via Hash
   const [currentHash, setCurrentHash] = useState<string>(() => {
@@ -129,24 +128,24 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative selection:bg-[#8266F0] selection:text-white">
+    <div className="min-h-screen flex flex-col relative selection:bg-brand selection:text-white">
       {/* Dyslexia Interactive Reading Ruler (z-35) */}
       <ReadingRuler />
 
-      {isStudentShell ? (
-        <StudentShell
+      {isAuthenticated ? (
+        <AppShell
+          role={role === "teacher" ? "teacher" : "student"}
           activeHash={currentHash}
           onNavigate={navigateTo}
           onOpenSearch={() => setSearchModalOpen(true)}
           onOpenVoice={() => setVoiceModalOpen(true)}
         >
           {renderActiveView()}
-        </StudentShell>
+        </AppShell>
       ) : (
         <>
           <Navbar
             activeHash={currentHash}
-            onOpenVoice={() => setVoiceModalOpen(true)}
             onOpenSearch={() => setSearchModalOpen(true)}
             onOpenLogin={() => setLoginModalOpen(true)}
           />
@@ -154,15 +153,12 @@ export const App: React.FC = () => {
         </>
       )}
 
-      {/* Students switch modes from the account menu; visitors from the header. */}
-      {isAuthenticated && !isStudentShell && <ModeToggleWidget />}
-
-      {/* Global Toast Alert Notification (z-[90]) */}
+      {/* Global Toast Alert Notification (z-[99999]) */}
       {toast && (
         <div
           role="alert"
           aria-live="assertive"
-          className="fixed bottom-6 left-6 z-[90] max-w-sm w-full bg-white dark:bg-[#1E1E24] rounded-2xl p-4 shadow-2xl border border-black/10 dark:border-white/10 flex items-start space-x-3 animate-in slide-in-from-bottom-5 duration-200"
+          className="fixed bottom-6 left-6 lg:left-28 z-[99999] max-w-sm w-full bg-white dark:bg-[#1E1E24] rounded-2xl p-4 shadow-2xl border border-black/10 dark:border-white/10 flex items-start space-x-3 animate-in slide-in-from-bottom-5 duration-200"
         >
           <div className="shrink-0 mt-0.5">
             {toast.type === "success" ? (
@@ -170,7 +166,7 @@ export const App: React.FC = () => {
             ) : toast.type === "warning" ? (
               <AlertTriangle className="w-5 h-5 text-amber-500" />
             ) : (
-              <Info className="w-5 h-5 text-[#8266F0]" />
+              <Info className="w-5 h-5 text-brand" />
             )}
           </div>
           <div className="flex-1 min-w-0">

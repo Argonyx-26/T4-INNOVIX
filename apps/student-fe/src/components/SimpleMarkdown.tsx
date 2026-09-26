@@ -20,8 +20,11 @@ const renderInline = (text: string, keyPrefix: string): React.ReactNode[] => {
   });
 };
 
+// Emoji and pictographic symbols are removed (the UI uses SVG icons); arrows and maths symbols stay.
+const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{2B55}\u{FE0F}\u{200D}]/gu;
+
 export const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = text.replace(EMOJI, "").replace(/\r\n/g, "\n").split("\n");
   const blocks: React.ReactNode[] = [];
   let i = 0;
 

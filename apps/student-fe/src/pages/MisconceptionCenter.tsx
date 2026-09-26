@@ -24,7 +24,9 @@ import {
 import { dataService } from "../services/dataService";
 import { useAuth } from "../context/AuthContext";
 import { PENDING_CHALLENGE_KEY } from "./LearnLensDiagnostic";
-import { PENDING_TUTOR_TOPIC_KEY } from "./AITutor";
+import { PENDING_PRACTICE_KEY } from "./AITutor";
+import { AiMisconceptionRecord } from "../services/dataService";
+import { RESOLVE_STREAK, slugKey } from "../services/learningService";
 import { StudentMisconceptionRecord, MisconceptionStatus } from "../types";
 
 interface MisconceptionCenterProps {
@@ -48,15 +50,32 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
     });
   }, [user?.uid]);
 
+  // AI-detected misconceptions get targeted open-ended practice; question-bank ones re-run their diagnostic loop.
   const practice = (record: StudentMisconceptionRecord) => {
-    const fromAiTest = record.conceptId.startsWith("ai:");
+    const ai = record as Partial<AiMisconceptionRecord>;
+    const fromAi = record.conceptId.startsWith("ai:");
     try {
-      if (fromAiTest) sessionStorage.setItem(PENDING_TUTOR_TOPIC_KEY, record.conceptName);
-      else sessionStorage.setItem(PENDING_CHALLENGE_KEY, record.conceptId);
+      if (fromAi) {
+        sessionStorage.setItem(
+          PENDING_PRACTICE_KEY,
+          JSON.stringify({
+            subject: record.discipline,
+            topic: record.conceptName,
+            focus: {
+              recordId: record.id,
+              ref: {
+                key: ai.misconceptionKey || slugKey(record.identifiedMisconception),
+                title: record.identifiedMisconception,
+                explanation: ai.explanation || "",
+              },
+            },
+          })
+        );
+      } else sessionStorage.setItem(PENDING_CHALLENGE_KEY, record.conceptId);
     } catch {
       /* storage unavailable: the target page opens on its default state */
     }
-    onNavigate(fromAiTest ? "#ai-tutor" : "#diagnostic");
+    onNavigate(fromAi ? "#ai-tutor" : "#diagnostic");
   };
 
   // Filter items
@@ -88,21 +107,21 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-black/5 dark:border-white/10">
         <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#8266F0]/10 text-[#8266F0] dark:bg-[#8266F0]/20 font-bold text-xs tracking-wider uppercase mb-2">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand/10 text-brand dark:bg-brand/20 font-bold text-xs tracking-wider uppercase mb-2">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Eduvia Cognitive Architecture Signature Feature</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white font-display">
             Misconception Command Center
           </h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1 max-w-2xl">
+          <p className="adhd-hide text-sm text-neutral-600 dark:text-neutral-400 mt-1 max-w-2xl">
             "Don't just detect the wrong answer. Diagnose the wrong thinking." Track your mental models as they evolve from initial detection to verified mastery.
           </p>
         </div>
 
         <button
           onClick={() => onNavigate("#diagnostic")}
-          className="px-6 py-3 rounded-2xl bg-gradient-to-r from-[#8266F0] to-[#EC4899] hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-[#8266F0]/25 transition flex items-center space-x-2 shrink-0"
+          className="px-6 py-3 rounded-2xl bg-gradient-to-r from-brand to-[#EC4899] hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-brand/25 transition flex items-center space-x-2 shrink-0"
         >
           <Target className="w-4 h-4" />
           <span>Launch AI Diagnostic</span>
@@ -119,17 +138,17 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
             <span className="w-2 h-2 rounded-full bg-rose-500" />
             <span>01 Detected</span>
           </div>
-          <span className="text-neutral-400">→</span>
+          <ArrowRight className="w-3.5 h-3.5 shrink-0 text-neutral-400" aria-hidden="true" />
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-500/20 whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
             <span>02 Remediating</span>
           </div>
-          <span className="text-neutral-400">→</span>
+          <ArrowRight className="w-3.5 h-3.5 shrink-0 text-neutral-400" aria-hidden="true" />
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 text-xs font-bold border border-sky-500/20 whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-sky-500" />
             <span>03 Re-Evaluating</span>
           </div>
-          <span className="text-neutral-400">→</span>
+          <ArrowRight className="w-3.5 h-3.5 shrink-0 text-neutral-400" aria-hidden="true" />
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20 whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span>04 Resolved</span>
@@ -176,20 +195,22 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
               placeholder="Search concepts or traps..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-xl bg-white dark:bg-[#1E1E24] border border-black/10 dark:border-white/10 text-xs text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#8266F0] w-48 sm:w-60"
+              className="pl-9 pr-4 py-2 rounded-xl bg-white dark:bg-[#1E1E24] border border-black/10 dark:border-white/10 text-xs text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand w-48 sm:w-60"
             />
           </div>
 
           <select
             value={selectedDiscipline}
             onChange={(e) => setSelectedDiscipline(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-white dark:bg-[#1E1E24] border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+            className="px-3 py-2 rounded-xl bg-white dark:bg-[#1E1E24] border border-black/10 dark:border-white/10 text-xs font-semibold text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="All">All Disciplines</option>
             <option value="Computer Science">Computer Science</option>
             <option value="Mathematics">Mathematics</option>
             <option value="Medicine & Physiology">Medicine & Physiology</option>
             <option value="Commerce & Finance">Commerce & Finance</option>
+            <option value="Natural Sciences">Natural Sciences</option>
+            <option value="Law & Humanities">Law & Humanities</option>
           </select>
         </div>
       </div>
@@ -199,7 +220,7 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
         {filteredRecords.map((item) => (
           <div
             key={item.id}
-            className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm hover:border-[#8266F0]/40 transition space-y-4 flex flex-col justify-between"
+            className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm hover:border-brand/40 transition space-y-4 flex flex-col justify-between"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
@@ -218,8 +239,8 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-1.5">
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-[#8266F0]">
+              <div className="adhd-hide p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-1.5">
+                <div className="flex items-center space-x-1.5 text-xs font-bold text-brand">
                   <Lightbulb className="w-3.5 h-3.5" />
                   <span>Remedial Intervention</span>
                 </div>
@@ -228,16 +249,21 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
                 </p>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-neutral-400 font-medium pt-1">
+              <div className="adhd-hide flex items-center justify-between text-[11px] text-neutral-400 font-medium pt-1">
                 <span>First detected: {item.firstDetected}</span>
                 <span>Attempts: {item.attemptCount}</span>
               </div>
+              {item.status !== "Resolved" && ((item as Partial<AiMisconceptionRecord>).practiceStreak || 0) > 0 && (
+                <div className="text-[11px] font-bold text-emerald-600">
+                  {(item as Partial<AiMisconceptionRecord>).practiceStreak}/{RESOLVE_STREAK} correct in a row: nearly resolved
+                </div>
+              )}
             </div>
 
             <div className="pt-3 border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
               <button
                 onClick={() => setSelectedRecord(item)}
-                className="text-xs font-bold text-[#8266F0] hover:underline flex items-center space-x-1"
+                className="text-xs font-bold text-brand hover:underline flex items-center space-x-1"
               >
                 <span>Cognitive Analysis & Detail</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -247,7 +273,7 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
                 onClick={() => practice(item)}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-[#141414] dark:bg-white text-white dark:text-[#141414] hover:opacity-90 shadow-sm transition flex items-center space-x-1.5"
               >
-                <span>{item.status === "Resolved" ? "Verify Retention" : "Practice Challenge"}</span>
+                <span>{item.status === "Resolved" ? "Verify Retention" : item.conceptId.startsWith("ai:") ? "Targeted Practice" : "Practice Challenge"}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -309,8 +335,8 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#8266F0]/10 border border-[#8266F0]/20 text-[#141414] dark:text-white space-y-1">
-                <span className="font-bold uppercase tracking-wider text-[10px] text-[#8266F0]">
+              <div className="p-4 rounded-2xl bg-brand/10 border border-brand/20 text-[#141414] dark:text-white space-y-1">
+                <span className="font-bold uppercase tracking-wider text-[10px] text-brand">
                   Scaffolded Micro-Intervention:
                 </span>
                 <p className="text-xs font-semibold">{selectedRecord.remedialInterventionTitle}</p>
@@ -326,7 +352,7 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
                     href="https://visualgo.net"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#8266F0] font-bold hover:underline flex items-center space-x-1"
+                    className="text-brand font-bold hover:underline flex items-center space-x-1"
                   >
                     <span>Launch Resource</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -347,7 +373,7 @@ export const MisconceptionCenter: React.FC<MisconceptionCenterProps> = ({ onNavi
                   setSelectedRecord(null);
                   practice(selectedRecord);
                 }}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#8266F0] to-[#EC4899] text-white hover:opacity-95 shadow transition flex items-center space-x-1.5"
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-brand to-[#EC4899] text-white hover:opacity-95 shadow transition flex items-center space-x-1.5"
               >
                 <span>Start Practice Loop</span>
                 <ArrowRight className="w-3.5 h-3.5" />

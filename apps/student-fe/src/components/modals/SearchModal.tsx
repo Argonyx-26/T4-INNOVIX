@@ -109,8 +109,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         </div>
 
         {/* Quick Diagnostic Shortcut */}
-        <div className="p-4 bg-[#8266F0]/5 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-xs font-medium text-[#8266F0]">
+        <div className="p-4 bg-brand/5 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-xs font-medium text-brand">
             <Sparkles className="w-4 h-4" />
             <span>Looking for immediate misconception clearance?</span>
           </div>
@@ -119,7 +119,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               onNavigate("#diagnostic");
               onClose();
             }}
-            className="text-xs font-semibold px-3 py-1 rounded-lg bg-[#8266F0] text-white hover:opacity-90 transition"
+            className="text-xs font-semibold px-3 py-1 rounded-lg bg-brand text-white hover:opacity-90 transition"
           >
             Launch Diagnostic Loop
           </button>
@@ -144,11 +144,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     className="p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition flex items-center justify-between group"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-xl bg-black/5 dark:bg-white/10 text-[#8266F0]">
+                      <div className="p-2 rounded-xl bg-black/5 dark:bg-white/10 text-brand">
                         <BookOpen className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-semibold text-sm text-[#141414] dark:text-white group-hover:text-[#8266F0] transition">
+                        <div className="font-semibold text-sm text-[#141414] dark:text-white group-hover:text-brand transition">
                           {c.title}
                         </div>
                         <div className="text-xs text-[#6B6B6B] dark:text-slate-400">
@@ -156,7 +156,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#8266F0] group-hover:translate-x-1 transition" />
+                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-brand group-hover:translate-x-1 transition" />
                   </div>
                 ))}
               </div>
@@ -173,7 +173,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     onNavigate("#library");
                     onClose();
                   }}
-                  className="text-[10px] text-[#8266F0] hover:underline"
+                  className="text-[10px] text-brand hover:underline"
                 >
                   View Library
                 </button>
@@ -193,7 +193,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         <Library className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-semibold text-sm text-[#141414] dark:text-white group-hover:text-[#8266F0] transition">
+                        <div className="font-semibold text-sm text-[#141414] dark:text-white group-hover:text-brand transition">
                           {r.title}
                         </div>
                         <div className="text-xs text-[#6B6B6B] dark:text-slate-400">
@@ -201,7 +201,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#8266F0] group-hover:translate-x-1 transition" />
+                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-brand group-hover:translate-x-1 transition" />
                   </div>
                 ))}
               </div>
@@ -231,7 +231,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         className="w-9 h-9 rounded-full object-cover"
                       />
                       <div>
-                        <div className="font-semibold text-sm text-[#141414] dark:text-white group-hover:text-[#8266F0] transition">
+                        <div className="font-semibold text-sm text-[#141414] dark:text-white group-hover:text-brand transition">
                           {ins.name}
                         </div>
                         <div className="text-xs text-[#6B6B6B] dark:text-slate-400">
@@ -239,7 +239,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         </div>
                       </div>
                     </div>
-                    <span className="text-xs font-semibold text-[#8266F0]">View Profile</span>
+                    <span className="text-xs font-semibold text-brand">View Profile</span>
                   </div>
                 ))}
               </div>

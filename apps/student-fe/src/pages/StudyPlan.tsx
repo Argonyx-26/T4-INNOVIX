@@ -97,14 +97,14 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-black/5 dark:border-white/10">
         <div>
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#8266F0]/10 text-[#8266F0] dark:bg-[#8266F0]/20 font-bold text-xs tracking-wider uppercase mb-2">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand/10 text-brand dark:bg-brand/20 font-bold text-xs tracking-wider uppercase mb-2">
             <Calendar className="w-3.5 h-3.5" />
             <span>Structured Cognitive Progression</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white font-display">
             My Study & Practice Plan
           </h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1 max-w-2xl">
+          <p className="adhd-hide text-sm text-neutral-600 dark:text-neutral-400 mt-1 max-w-2xl">
             Targeted micro-milestones scheduled around your identified cognitive gaps to prevent cognitive decay and maintain retention.
           </p>
         </div>
@@ -125,11 +125,11 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
             <h2 className="text-xl font-bold font-display text-neutral-900 dark:text-white">
               Today's Targeted Agenda
             </h2>
-            <p className="text-xs text-neutral-500">
+            <p className="adhd-hide text-xs text-neutral-500">
               Complete these 3 micro-tasks (total 18 mins) to stabilize your model.
             </p>
           </div>
-          <span className="text-xs font-bold text-[#8266F0]">
+          <span className="text-xs font-bold text-brand">
             {completedItems.length} of {todayTasks.length} Completed
           </span>
         </div>
@@ -143,7 +143,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
                 className={`p-4 rounded-2xl border transition flex items-center justify-between gap-4 ${
                   isDone
                     ? "bg-emerald-500/5 border-emerald-500/20"
-                    : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 hover:border-[#8266F0]/40"
+                    : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 hover:border-brand/40"
                 }`}
               >
                 <div className="flex items-center space-x-3.5 min-w-0">
@@ -152,7 +152,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
                     className={`w-6 h-6 rounded-lg flex items-center justify-center transition shrink-0 ${
                       isDone
                         ? "bg-emerald-500 text-white"
-                        : "border-2 border-neutral-300 dark:border-neutral-600 hover:border-[#8266F0]"
+                        : "border-2 border-neutral-300 dark:border-neutral-600 hover:border-brand"
                     }`}
                   >
                     {isDone && <CheckCircle2 className="w-4 h-4" />}
@@ -177,7 +177,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
 
                 <button
                   onClick={() => onNavigate(task.actionHash)}
-                  className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold text-[#8266F0] hover:bg-[#8266F0]/10 transition flex items-center space-x-1"
+                  className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold text-brand hover:bg-brand/10 transition flex items-center space-x-1"
                 >
                   <span>Launch</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -194,7 +194,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
           <h2 className="text-xl font-bold font-display text-neutral-900 dark:text-white">
             Weekly Progression Track
           </h2>
-          <p className="text-xs text-neutral-500">
+          <p className="adhd-hide text-xs text-neutral-500">
             Aligned with your active Learning Path: Algorithmic Rigor & Correctness.
           </p>
         </div>
@@ -205,7 +205,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
               key={i}
               className={`p-4 rounded-2xl border space-y-2 flex flex-col justify-between ${
                 m.isToday
-                  ? "bg-[#8266F0]/10 border-[#8266F0] shadow-sm"
+                  ? "bg-brand/10 border-brand shadow-sm"
                   : m.completed
                   ? "bg-emerald-500/5 border-emerald-500/20"
                   : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 opacity-70"
@@ -213,14 +213,14 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
             >
               <div>
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className={m.isToday ? "text-[#8266F0]" : "text-neutral-500"}>
+                  <span className={m.isToday ? "text-brand" : "text-neutral-500"}>
                     {m.day}
                   </span>
                   {m.completed && (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                   )}
                   {m.isToday && (
-                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#8266F0] text-white">
+                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-brand text-white">
                       Active
                     </span>
                   )}
@@ -231,7 +231,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
               </div>
 
               <div className="pt-2 text-[10px] font-bold text-neutral-400">
-                {m.completed ? "Cleared ✓" : m.isToday ? "Pending exit ticket" : "Scheduled"}
+                {m.completed ? <><CheckCircle2 className="inline w-3 h-3 -mt-0.5 mr-1" aria-hidden="true" />Cleared</> : m.isToday ? "Pending exit ticket" : "Scheduled"}
               </div>
             </div>
           ))}
@@ -244,12 +244,12 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
         <div className="rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold font-display text-neutral-900 dark:text-white flex items-center space-x-2">
-              <Bookmark className="w-4 h-4 text-[#8266F0]" />
+              <Bookmark className="w-4 h-4 text-brand" />
               <span>Saved Courses</span>
             </h3>
             <button
               onClick={() => onNavigate("#courses")}
-              className="text-xs font-bold text-[#8266F0] hover:underline"
+              className="text-xs font-bold text-brand hover:underline"
             >
               Explore more
             </button>
@@ -265,7 +265,7 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
               <div
                 key={c.id}
                 onClick={() => onNavigate("#courses")}
-                className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-between cursor-pointer hover:border-[#8266F0]/30 transition"
+                className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-between cursor-pointer hover:border-brand/30 transition"
               >
                 <div>
                   <h4 className="text-xs font-bold text-neutral-900 dark:text-white line-clamp-1">
@@ -280,16 +280,16 @@ export const StudyPlan: React.FC<StudyPlanProps> = ({ onNavigate }) => {
         </div>
 
         {/* Quick Diagnostic Jump */}
-        <div className="rounded-3xl bg-gradient-to-br from-[#8266F0]/15 to-[#EC4899]/15 border border-[#8266F0]/20 p-6 shadow-sm space-y-4 flex flex-col justify-between">
+        <div className="rounded-3xl bg-gradient-to-br from-brand/15 to-[#EC4899]/15 border border-brand/20 p-6 shadow-sm space-y-4 flex flex-col justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-[#8266F0] uppercase">
+            <div className="inline-flex items-center space-x-1.5 text-xs font-bold text-brand uppercase">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Spaced Cognitive Reinforcement</span>
             </div>
             <h3 className="text-lg font-bold font-display text-neutral-900 dark:text-white">
               Ready for a 60-Second Challenge?
             </h3>
-            <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+            <p className="adhd-hide text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
               Verify your retention on negative sign distribution before tonight's Bayesian decay window.
             </p>
           </div>

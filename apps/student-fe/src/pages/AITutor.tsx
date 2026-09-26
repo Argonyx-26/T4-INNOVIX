@@ -15,6 +15,8 @@ import {
   MessageSquare,
   Flag,
   X,
+  PenLine,
+  History,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useThemeMode } from "../context/ThemeModeContext";
@@ -22,8 +24,33 @@ import { dataService, AiMisconceptionRecord, REPEAT_THRESHOLD } from "../service
 import { tutorService, TutorError, ChatMessage, Difficulty, GeneratedTest, TestAnalysis } from "../services/tutorService";
 import { AnswerOption, PhaseChip } from "../components/diagnostic/DiagnosticTemplate";
 import { SimpleMarkdown } from "../components/SimpleMarkdown";
+import { OpenPractice, PracticeStart } from "../components/tutor/OpenPractice";
+import {
+  learningService,
+  describeSession,
+  recommendTopics,
+  McqTestSession,
+  OpenPracticeSession,
+  Sessions,
+  TopicMasteryMap,
+  RESOLVE_STREAK,
+} from "../services/learningService";
+import { resolveTopic } from "../data/curriculum";
+import { StudentMisconceptionRecord } from "../types";
 
 export const PENDING_TUTOR_TOPIC_KEY = "eduvia_tutor_topic";
+/** JSON PracticeStart: opens the Practice tab on a topic (targeted if it has a focus). */
+export const PENDING_PRACTICE_KEY = "eduvia_practice_start";
+/** "practice" | "test": resume that saved session as soon as the page loads. */
+export const RESUME_KEY = "eduvia_resume_session";
+
+const readOnce = (key: string): string | null => {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
 
 type StoredMessage = ChatMessage & { provider?: string };
 type Phase = "setup" | "loading" | "taking" | "submitting" | "results";
@@ -53,9 +80,9 @@ const readChat = (key: string): StoredMessage[] => {
 
 const card = "rounded-[28px] bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)]";
 const primaryBtn =
-  "h-11 px-6 rounded-full bg-[#8266F0] hover:bg-[#6F52E6] text-white text-sm font-bold flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed";
+  "h-11 px-6 rounded-full bg-brand hover:bg-brand-strong text-white text-sm font-bold flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed";
 const secondaryBtn =
-  "h-11 px-5 rounded-full bg-[#EDEDEC] hover:bg-[#E2E2E0] text-[#141414] text-sm font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50";
+  "h-11 px-5 rounded-full bg-fill-2 hover:bg-fill-hover text-[#141414] text-sm font-semibold flex items-center justify-center gap-2 transition disabled:opacity-50";
 
 export const AITutor: React.FC = () => {
   const { user } = useAuth();
@@ -63,22 +90,27 @@ export const AITutor: React.FC = () => {
   const uid = user?.uid;
   const chatKey = `eduvia_tutor_chat_${uid || "guest"}`;
 
-  const [pendingTopic] = useState<string | null>(() => {
+  const [pendingTopic] = useState<string | null>(() => readOnce(PENDING_TUTOR_TOPIC_KEY));
+  const [pendingPractice, setPendingPractice] = useState<PracticeStart | null>(() => {
     try {
-      return sessionStorage.getItem(PENDING_TUTOR_TOPIC_KEY);
+      const raw = readOnce(PENDING_PRACTICE_KEY);
+      return raw ? (JSON.parse(raw) as PracticeStart) : null;
     } catch {
       return null;
     }
   });
+  const [resumeRequest] = useState<string | null>(() => readOnce(RESUME_KEY));
   useEffect(() => {
     try {
-      sessionStorage.removeItem(PENDING_TUTOR_TOPIC_KEY);
+      [PENDING_TUTOR_TOPIC_KEY, PENDING_PRACTICE_KEY, RESUME_KEY].forEach((k) => sessionStorage.removeItem(k));
     } catch {
       /* storage unavailable */
     }
   }, []);
 
-  const [tab, setTab] = useState<"chat" | "test">(pendingTopic ? "test" : "chat");
+  const [tab, setTab] = useState<"chat" | "practice" | "test">(
+    pendingPractice || resumeRequest === "practice" ? "practice" : pendingTopic || resumeRequest === "test" ? "test" : "chat"
+  );
 
   // ---------------- Chat ----------------
   const [messages, setMessages] = useState<StoredMessage[]>(() => readChat(chatKey));
@@ -134,19 +166,63 @@ export const AITutor: React.FC = () => {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const savedTestIds = useRef(new Set<string>());
 
-  const [memory, setMemory] = useState<AiMisconceptionRecord[]>([]);
+  const [records, setRecords] = useState<StudentMisconceptionRecord[]>([]);
+  const [mastery, setMastery] = useState<TopicMasteryMap>({});
   const [memoryLoading, setMemoryLoading] = useState(true);
+  const [savedSessions, setSavedSessions] = useState<Sessions>({});
+  const [practiceSession, setPracticeSession] = useState<OpenPracticeSession | null>(null);
+  const memory = useMemo(
+    () => records.filter((r) => (r as Partial<AiMisconceptionRecord>).source === "ai-test") as AiMisconceptionRecord[],
+    [records]
+  );
+  // AI records carry a validated discipline string; both shapes live in the same collection.
+  const mergeRecords = (updated: Array<StudentMisconceptionRecord | AiMisconceptionRecord>) =>
+    setRecords((prev) => [
+      ...(updated as StudentMisconceptionRecord[]),
+      ...prev.filter((p) => !updated.some((u) => u.id === p.id)),
+    ]);
+
   useEffect(() => {
     if (!uid) {
       setMemoryLoading(false);
       return;
     }
-    dataService
-      .getAiMisconceptions(uid)
-      .then(setMemory)
-      .catch((err) => console.warn("[AI Tutor] Could not load past mistakes:", err))
-      .finally(() => setMemoryLoading(false));
+    let cancelled = false;
+    Promise.all([
+      dataService.getStudentMisconceptions(uid),
+      learningService.getTopicMastery(uid).catch(() => ({} as TopicMasteryMap)),
+      learningService.getSessions(uid).catch(() => ({} as Sessions)),
+    ]).then(([recs, m, sessions]) => {
+      if (cancelled) return;
+      setRecords(recs);
+      setMastery(m);
+      setSavedSessions(sessions);
+      setMemoryLoading(false);
+      if (resumeRequest === "practice" && sessions.practice) setPracticeSession(sessions.practice);
+      if (resumeRequest === "test" && sessions.test) resumeTest(sessions.test);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
+
+  const recommendations = useMemo(() => recommendTopics(mastery, records, user?.academicTier), [mastery, records, user?.academicTier]);
+
+  // Continue Learning: persist in-progress work (debounced) so it can be resumed on any device.
+  const persist = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const saveSlot = (slot: "practice" | "test", value: OpenPracticeSession | McqTestSession | null, immediate = false) => {
+    if (!uid) return;
+    setSavedSessions((prev) => ({ ...prev, [slot]: value }));
+    clearTimeout(persist.current[slot]);
+    const run = () => learningService.saveSession(uid, slot, value).catch((err) => console.warn("[AI Tutor] Couldn't save session:", err));
+    if (immediate) run();
+    else persist.current[slot] = setTimeout(run, 800);
+  };
+  const changePractice = (next: OpenPracticeSession | null) => {
+    setPracticeSession(next);
+    saveSlot("practice", next, next === null);
+  };
 
   const startTest = async (overrideTopic?: string) => {
     const t = (overrideTopic ?? topic).trim();
@@ -158,9 +234,11 @@ export const AITutor: React.FC = () => {
     setTestError(null);
     setPhase("loading");
     try {
+      const resolved = resolveTopic(t);
       const generated = await tutorService.generateTest(
         {
           topic: t,
+          subject: resolved.id.startsWith("custom:") ? undefined : resolved.subject,
           difficulty,
           count,
           known_misconceptions: memory.slice(0, 30).map((m) => ({ key: m.misconceptionKey, title: m.identifiedMisconception })),
@@ -187,7 +265,9 @@ export const AITutor: React.FC = () => {
     try {
       const updated = await dataService.recordAiTestResult(uid, user?.displayName || "Student", analysis, memory);
       savedTestIds.current.add(analysis.test_id);
-      setMemory((prev) => [...updated, ...prev.filter((p) => !updated.some((u) => u.id === p.id))]);
+      mergeRecords(updated);
+      const m = await learningService.recordTopicEvidence(uid, analysis.topic, analysis.discipline, analysis.results.map((r) => r.is_correct));
+      if (m) setMastery((prev) => ({ ...prev, [m.topicId]: m }));
       setSaveState("saved");
       const newlyFlagged = updated.filter((u) => u.flagged && !memory.find((m) => m.id === u.id)?.flagged);
       if (newlyFlagged.length) {
@@ -213,6 +293,7 @@ export const AITutor: React.FC = () => {
       const analysis = await tutorService.analyzeTest(test.token, all, uid);
       setResult(analysis);
       setPhase("results");
+      saveSlot("test", null, true);
       saveResult(analysis);
     } catch (err) {
       setTestError(err instanceof TutorError ? err.message : "Couldn't grade the test. Please try again.");
@@ -221,11 +302,38 @@ export const AITutor: React.FC = () => {
   };
 
   const quitTest = () => {
-    if (window.confirm("Leave this test? Your answers will be lost.")) {
+    if (window.confirm("Discard this test? Your answers will be lost. (To finish later, just leave the page: your progress is saved.)")) {
       setPhase("setup");
       setTest(null);
+      saveSlot("test", null, true);
     }
   };
+
+  function resumeTest(saved: McqTestSession) {
+    setTest(saved.test);
+    setTopic(saved.topic);
+    setAnswers(saved.answers || {});
+    setCurrent(Math.min(saved.current || 0, saved.test.questions.length - 1));
+    setConfirmSubmit(false);
+    setResult(null);
+    setSaveState("idle");
+    setPhase("taking");
+    setTab("test");
+  }
+
+  useEffect(() => {
+    if (phase !== "taking" || !test) return;
+    saveSlot("test", {
+      kind: "mcq-test",
+      subject: test.discipline,
+      topic: test.topic,
+      test,
+      answers,
+      current,
+      updatedAt: new Date().toISOString(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, test, answers, current]);
 
   const askTutorAboutMistakes = () => {
     if (!result) return;
@@ -254,7 +362,7 @@ export const AITutor: React.FC = () => {
           value={chatTopic}
           onChange={(e) => setChatTopic(e.target.value.slice(0, 120))}
           placeholder="What are you studying? (optional)"
-          className="h-10 min-w-0 flex-1 rounded-full border border-black/10 bg-[#F6F3F0] px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+          className="h-10 min-w-0 flex-1 rounded-full border border-black/10 bg-fill px-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
         />
         <button
           onClick={() => {
@@ -273,7 +381,7 @@ export const AITutor: React.FC = () => {
           }}
           disabled={messages.length === 0 || sending}
           aria-label="Clear chat"
-          className="h-10 w-10 grid place-items-center rounded-full bg-[#EDEDEC] hover:bg-[#E2E2E0] disabled:opacity-40 transition"
+          className="h-10 w-10 grid place-items-center rounded-full bg-fill-2 hover:bg-fill-hover disabled:opacity-40 transition"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -282,17 +390,17 @@ export const AITutor: React.FC = () => {
       <div ref={logRef} role="log" aria-live="polite" className="h-[min(58vh,540px)] overflow-y-auto p-4 sm:p-6 space-y-4">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
-            <span className="w-14 h-14 rounded-2xl bg-[#EEE8FD] grid place-items-center text-[#6B4FD8]">
+            <span className="w-14 h-14 rounded-2xl bg-brand-soft grid place-items-center text-brand-strong">
               <Bot className="w-7 h-7" />
             </span>
             <h2 className="mt-4 font-display text-xl font-bold text-[#141414]">Ask me anything you're learning</h2>
-            <p className="mt-1 text-sm text-[#6B6B6B] max-w-sm">I'll explain step by step and check your understanding along the way.</p>
+            <p className="adhd-hide mt-1 text-sm text-[#6B6B6B] max-w-sm">I'll explain step by step and check your understanding along the way.</p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {CHAT_SUGGESTIONS.map((s) => (
                 <button
                   key={s}
                   onClick={() => sendChat(s)}
-                  className="rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-semibold text-[#1F1F1F] hover:border-[#8266F0] hover:bg-[#F7F5FF] transition"
+                  className="rounded-full border border-black/10 bg-white px-3.5 py-2 text-xs font-semibold text-[#1F1F1F] hover:border-brand hover:bg-brand-faint transition"
                 >
                   {s}
                 </button>
@@ -303,13 +411,13 @@ export const AITutor: React.FC = () => {
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start gap-2.5"}`}>
             {m.role === "assistant" && (
-              <span className="mt-1 w-8 h-8 shrink-0 rounded-full bg-[#EEE8FD] grid place-items-center text-[#6B4FD8]">
+              <span className="mt-1 w-8 h-8 shrink-0 rounded-full bg-brand-soft grid place-items-center text-brand-strong">
                 <Bot className="w-4 h-4" />
               </span>
             )}
             <div
               className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-relaxed ${
-                m.role === "user" ? "bg-[#1F2230] text-white rounded-br-lg whitespace-pre-wrap" : "bg-[#F4F1EE] text-[#1F1F1F] rounded-tl-lg"
+                m.role === "user" ? "bg-[#1F2230] text-white rounded-br-lg whitespace-pre-wrap" : "bg-fill text-[#1F1F1F] rounded-tl-lg"
               }`}
             >
               {m.role === "assistant" ? <SimpleMarkdown text={m.content} /> : m.content}
@@ -361,9 +469,9 @@ export const AITutor: React.FC = () => {
             }
           }}
           placeholder="Ask a question… (Shift+Enter for a new line)"
-          className="min-h-[48px] flex-1 resize-none rounded-3xl border border-black/10 bg-[#F6F3F0] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+          className="min-h-[48px] flex-1 resize-none rounded-3xl border border-black/10 bg-fill px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
         />
-        <button type="submit" disabled={!input.trim() || sending} aria-label="Send" className="h-12 w-12 shrink-0 rounded-full bg-[#8266F0] hover:bg-[#6F52E6] text-white grid place-items-center disabled:opacity-40 transition">
+        <button type="submit" disabled={!input.trim() || sending} aria-label="Send" className="h-12 w-12 shrink-0 rounded-full bg-brand hover:bg-brand-strong text-white grid place-items-center disabled:opacity-40 transition">
           <Send className="w-5 h-5" />
         </button>
       </form>
@@ -375,7 +483,7 @@ export const AITutor: React.FC = () => {
       <div>
         <PhaseChip tone="purple" icon={Sparkles}>AI-generated test</PhaseChip>
         <h2 id="test-setup-title" className="mt-3 font-display text-2xl font-bold text-[#141414]">Test yourself on any topic</h2>
-        <p className="mt-1 text-sm text-[#6B6B6B]">
+        <p className="adhd-hide mt-1 text-sm text-[#6B6B6B]">
           One question at a time. You'll see your score, the misconceptions behind your mistakes, and explanations at the end.
         </p>
       </div>
@@ -387,13 +495,13 @@ export const AITutor: React.FC = () => {
           onChange={(e) => setTopic(e.target.value.slice(0, 120))}
           onKeyDown={(e) => e.key === "Enter" && startTest()}
           placeholder="e.g. Quadratic equations, Photosynthesis, SQL joins"
-          className="mt-2 h-12 w-full rounded-2xl border border-black/10 bg-[#F6F3F0] px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#8266F0]"
+          className="mt-2 h-12 w-full rounded-2xl border border-black/10 bg-fill px-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
         />
         {sortedMemory.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             <span className="text-xs text-[#6B6B6B] py-1">Revisit:</span>
             {Array.from(new Set(sortedMemory.map((m) => m.conceptName))).slice(0, 4).map((t) => (
-              <button key={t} onClick={() => setTopic(t)} className="rounded-full bg-[#EDEDEC] hover:bg-[#E2E2E0] px-3 py-1 text-xs font-semibold transition">
+              <button key={t} onClick={() => setTopic(t)} className="rounded-full bg-fill-2 hover:bg-fill-hover px-3 py-1 text-xs font-semibold transition">
                 {t}
               </button>
             ))}
@@ -410,11 +518,11 @@ export const AITutor: React.FC = () => {
               aria-pressed={difficulty === d.id}
               onClick={() => setDifficulty(d.id)}
               className={`rounded-2xl border px-4 py-3 text-left transition ${
-                difficulty === d.id ? "border-[#8266F0] bg-[#F3F0FF] ring-2 ring-[#8266F0]/30" : "border-[#E3E3E1] hover:border-[#8266F0]"
+                difficulty === d.id ? "border-brand bg-brand-faint ring-2 ring-brand/30" : "border-[#E3E3E1] hover:border-brand"
               }`}
             >
               <span className="block text-sm font-bold text-[#141414]">{d.label}</span>
-              <span className="block text-xs text-[#6B6B6B]">{d.hint}</span>
+              <span className="adhd-hide block text-xs text-[#6B6B6B]">{d.hint}</span>
             </button>
           ))}
         </div>
@@ -428,7 +536,7 @@ export const AITutor: React.FC = () => {
               type="button"
               aria-pressed={count === c}
               onClick={() => setCount(c)}
-              className={`h-10 w-16 rounded-full text-sm font-bold transition ${count === c ? "bg-[#141414] text-white" : "bg-[#EDEDEC] hover:bg-[#E2E2E0]"}`}
+              className={`h-10 w-16 rounded-full text-sm font-bold transition ${count === c ? "bg-[#141414] text-white" : "bg-fill-2 hover:bg-fill-hover"}`}
             >
               {c}
             </button>
@@ -454,7 +562,7 @@ export const AITutor: React.FC = () => {
       <section className={`${card} p-6 sm:p-8`} aria-labelledby="question-title">
         <div className="flex items-start justify-between gap-4 border-b border-black/10 pb-5">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="w-9 h-9 shrink-0 rounded-full bg-[#EDEDEC] grid place-items-center text-xs font-bold">
+            <span className="w-9 h-9 shrink-0 rounded-full bg-fill-2 grid place-items-center text-xs font-bold">
               {String(current + 1).padStart(2, "0")}
             </span>
             <div className="min-w-0">
@@ -466,13 +574,13 @@ export const AITutor: React.FC = () => {
               </p>
             </div>
           </div>
-          <button onClick={quitTest} className="h-9 px-3.5 rounded-full bg-[#EDEDEC] hover:bg-[#E2E2E0] text-xs font-semibold flex items-center gap-1.5 transition shrink-0">
+          <button onClick={quitTest} className="h-9 px-3.5 rounded-full bg-fill-2 hover:bg-fill-hover text-xs font-semibold flex items-center gap-1.5 transition shrink-0">
             <X className="w-3.5 h-3.5" /> Quit
           </button>
         </div>
 
         <div className="mt-5 h-2 rounded-full bg-[#E5E5E4] overflow-hidden" role="progressbar" aria-label="Questions answered" aria-valuenow={test.questions.length - unanswered} aria-valuemin={0} aria-valuemax={test.questions.length}>
-          <div className="h-full rounded-full bg-[#8266F0] transition-[width] duration-300" style={{ width: `${((test.questions.length - unanswered) / test.questions.length) * 100}%` }} />
+          <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${((test.questions.length - unanswered) / test.questions.length) * 100}%` }} />
         </div>
 
         <p className="mt-6 text-lg font-bold text-[#141414] leading-snug">{q.question}</p>
@@ -495,7 +603,7 @@ export const AITutor: React.FC = () => {
               aria-label={`Question ${i + 1}${answers[qq.id] ? ", answered" : ""}`}
               aria-current={i === current ? "step" : undefined}
               className={`w-8 h-8 rounded-full text-xs font-bold transition ${
-                i === current ? "bg-[#141414] text-white" : answers[qq.id] ? "bg-[#E5DEFD] text-[#4B32B8]" : "bg-[#EDEDEC] text-[#6B6B6B]"
+                i === current ? "bg-[#141414] text-white" : answers[qq.id] ? "bg-brand-soft text-brand-ink" : "bg-fill-2 text-[#6B6B6B]"
               }`}
             >
               {i + 1}
@@ -565,7 +673,7 @@ export const AITutor: React.FC = () => {
               <PhaseChip tone={pct >= 70 ? "green" : "amber"} icon={CheckCircle2}>Test complete</PhaseChip>
               <h2 id="results-title" className="mt-2 font-display text-2xl font-bold text-[#141414]">{result.topic}</h2>
               <p className="mt-2 text-sm leading-relaxed text-[#4B4B4B]">{result.analysis.summary}</p>
-              <p className="mt-2 text-xs text-[#6B6B6B]">
+              <p className="adhd-hide mt-2 text-xs text-[#6B6B6B]">
                 {result.answered} of {result.total} answered · {result.difficulty}
                 {result.provider ? ` · analysed by ${PROVIDER_LABEL[result.provider] || result.provider}` : ""}
               </p>
@@ -582,9 +690,9 @@ export const AITutor: React.FC = () => {
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[
-              { title: "Strengths", items: result.analysis.strengths, tone: "bg-[#E7F8F0] text-[#065F46]" },
+              { title: "Strengths", items: result.analysis.strengths, tone: "adhd-hide bg-[#E7F8F0] text-[#065F46]" },
               { title: "Focus areas", items: result.analysis.focus_areas, tone: "bg-[#FFF7E6] text-[#5C4200]" },
-              { title: "Next steps", items: result.analysis.next_steps, tone: "bg-[#F3F0FF] text-[#2A1B6B]" },
+              { title: "Next steps", items: result.analysis.next_steps, tone: "adhd-hide bg-brand-faint text-[#2A1B6B]" },
             ]
               .filter((b) => b.items.length)
               .map((b) => (
@@ -625,7 +733,7 @@ export const AITutor: React.FC = () => {
                         {flagged ? `Repeated ${total}× · shared with teacher` : `${m.count}× in this test · ${total} total`}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-[#4B4B4B]">{m.explanation}</p>
+                    <p className="adhd-clamp mt-1 text-sm text-[#4B4B4B]">{m.explanation}</p>
                   </div>
                 );
               })}
@@ -646,7 +754,7 @@ export const AITutor: React.FC = () => {
                       <p className="text-sm text-[#7F1D1D]">Your answer: {r.chosen_text ? `${r.chosen_id}. ${r.chosen_text}` : "not answered"}</p>
                     )}
                     <p className="text-sm text-[#065F46]">Correct answer: {r.correct_id}. {r.correct_text}</p>
-                    {r.explanation && <p className="text-sm text-[#4B4B4B]">{r.explanation}</p>}
+                    {r.explanation && <p className="adhd-clamp text-sm text-[#4B4B4B]">{r.explanation}</p>}
                     {r.misconception && (
                       <p className="text-xs text-[#7C5300] bg-[#FFF7E6] rounded-xl px-3 py-2">
                         <strong>Misconception:</strong> {r.misconception.title}. {r.misconception.explanation}
@@ -666,9 +774,9 @@ export const AITutor: React.FC = () => {
     if (phase === "loading" || phase === "submitting") {
       return (
         <section className={`${card} p-10 text-center`} aria-live="polite">
-          <Loader2 className="w-8 h-8 mx-auto animate-spin text-[#8266F0]" />
+          <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand" />
           <p className="mt-3 font-semibold text-[#141414]">{phase === "loading" ? `Writing your ${difficulty} test on ${topic}…` : "Checking your answers…"}</p>
-          <p className="mt-1 text-xs text-[#6B6B6B]">This usually takes a few seconds.</p>
+          <p className="adhd-hide mt-1 text-xs text-[#6B6B6B]">This usually takes a few seconds.</p>
         </section>
       );
     }
@@ -682,12 +790,13 @@ export const AITutor: React.FC = () => {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-extrabold text-[#141414]">AI Tutor</h1>
-          <p className="text-sm text-[#6B6B6B]">Learn by chatting, then test yourself on any topic.</p>
+          <p className="adhd-hide text-sm text-[#6B6B6B]">Learn by chatting, then test yourself on any topic.</p>
         </div>
-        <div role="tablist" aria-label="AI tutor mode" className="flex gap-2 rounded-full bg-[#F4EDE7] p-1">
+        <div role="tablist" aria-label="AI tutor mode" className="flex gap-2 rounded-full bg-fill p-1">
           {([
             { id: "chat", label: "Chat", icon: MessageSquare },
-            { id: "test", label: "Topic test", icon: ClipboardCheck },
+            { id: "practice", label: "Practice", icon: PenLine },
+            { id: "test", label: "Quick test", icon: ClipboardCheck },
           ] as const).map((t) => (
             <button
               key={t.id}
@@ -704,15 +813,77 @@ export const AITutor: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] items-start">
-        <div className="min-w-0" role="tabpanel">{tab === "chat" ? renderChat() : renderTest()}</div>
+      {(() => {
+        const resumable = [
+          !practiceSession && savedSessions.practice ? { slot: "practice" as const, s: savedSessions.practice } : null,
+          phase !== "taking" && savedSessions.test ? { slot: "test" as const, s: savedSessions.test } : null,
+        ].filter(Boolean) as { slot: "practice" | "test"; s: OpenPracticeSession | McqTestSession }[];
+        if (!resumable.length) return null;
+        return (
+          <div className="mb-5 space-y-2" aria-label="Continue where you left off">
+            {resumable.map(({ slot, s }) => {
+              const d = describeSession(s);
+              return (
+                <div key={slot} className="flex flex-wrap items-center gap-3 rounded-[22px] bg-brand-soft px-4 py-3">
+                  <History className="w-5 h-5 text-brand-ink shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-[#2A1B6B]">Continue where you left off: {d.title}</div>
+                    <div className="text-xs text-brand-ink">{d.detail}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (slot === "practice") {
+                        setPracticeSession(s as OpenPracticeSession);
+                        setTab("practice");
+                      } else resumeTest(s as McqTestSession);
+                    }}
+                    className="h-9 px-4 rounded-full bg-brand-ink text-white text-xs font-bold"
+                  >
+                    Resume
+                  </button>
+                  <button onClick={() => saveSlot(slot, null, true)} className="h-9 px-3 rounded-full text-xs font-semibold text-brand-ink hover:bg-white/50">
+                    Discard
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
-        <aside className="min-w-0 rounded-[28px] bg-[#E8E8E6] p-4" aria-labelledby="repeat-title">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] items-start">
+        <div className="min-w-0" role="tabpanel">
+          {tab === "chat" ? (
+            renderChat()
+          ) : tab === "practice" ? (
+            <OpenPractice
+              uid={uid}
+              studentName={user?.displayName || "Student"}
+              records={records}
+              onRecordsUpdated={mergeRecords}
+              onMasteryUpdated={(m) => setMastery((prev) => ({ ...prev, [m.topicId]: m }))}
+              recommendations={recommendations}
+              session={practiceSession}
+              onSessionChange={changePractice}
+              pendingStart={pendingPractice}
+              onPendingHandled={() => setPendingPractice(null)}
+              onAskTutor={(msg, t) => {
+                setChatTopic(t);
+                setTab("chat");
+                sendChat(msg, t);
+              }}
+            />
+          ) : (
+            renderTest()
+          )}
+        </div>
+
+        <aside className="min-w-0 rounded-[28px] bg-fill-2 p-4" aria-labelledby="repeat-title">
           <h2 id="repeat-title" className="font-sans flex items-center gap-2 px-1 pb-1 text-xs font-bold text-[#141414]">
             <Flag className="w-4 h-4" /> Your repeated mistakes
           </h2>
-          <p className="px-1 pb-3 text-[11px] text-[#6B6B6B]">
-            A mistake that comes up {REPEAT_THRESHOLD} times in AI tests is shared with your teacher so they can help.
+          <p className="adhd-hide px-1 pb-3 text-[11px] text-[#6B6B6B]">
+            A mistake that comes up {REPEAT_THRESHOLD} times is shared with your teacher. Tap one to practise it: {RESOLVE_STREAK} correct answers in a row resolve it.
           </p>
           <div className="space-y-2.5">
             {memoryLoading ? (
@@ -724,10 +895,16 @@ export const AITutor: React.FC = () => {
                 <button
                   key={m.id}
                   onClick={() => {
-                    setTopic(m.conceptName);
-                    setTab("test");
-                    if (phase !== "taking") setPhase("setup");
+                    if (m.status === "Resolved") return;
+                    setPendingPractice({
+                      subject: m.discipline,
+                      topic: m.conceptName,
+                      focus: { recordId: m.id, ref: { key: m.misconceptionKey, title: m.identifiedMisconception, explanation: m.explanation } },
+                    });
+                    setPracticeSession(null);
+                    setTab("practice");
                   }}
+                  title={m.status === "Resolved" ? "Resolved" : "Practise this misconception"}
                   className="w-full rounded-2xl bg-white px-4 py-3 text-left hover:shadow-md transition"
                 >
                   <span className="flex items-start justify-between gap-2">
@@ -735,7 +912,11 @@ export const AITutor: React.FC = () => {
                       <span className="block text-[13px] font-bold text-[#141414]">{m.identifiedMisconception}</span>
                       <span className="block text-[11px] text-[#6B6B6B] truncate">{m.conceptName}</span>
                     </span>
-                    {m.flagged && <span className="shrink-0 rounded-full bg-[#F4CACA] px-2 py-0.5 text-[10px] font-bold text-[#7F1D1D]">Shared</span>}
+                    {m.status === "Resolved" ? (
+                      <span className="shrink-0 rounded-full bg-[#BDEBD4] px-2 py-0.5 text-[10px] font-bold text-[#065F46]">Resolved</span>
+                    ) : m.flagged ? (
+                      <span className="shrink-0 rounded-full bg-[#F4CACA] px-2 py-0.5 text-[10px] font-bold text-[#7F1D1D]">Shared</span>
+                    ) : null}
                   </span>
                   <span className="mt-2 flex items-center gap-1.5" aria-label={`${m.attemptCount} of ${REPEAT_THRESHOLD} before sharing`}>
                     {Array.from({ length: REPEAT_THRESHOLD }).map((_, i) => (
@@ -743,6 +924,11 @@ export const AITutor: React.FC = () => {
                     ))}
                     <span className="ml-1 text-[10px] font-semibold text-[#6B6B6B]">{m.attemptCount}×</span>
                   </span>
+                  {m.status !== "Resolved" && (m.practiceStreak || 0) > 0 && (
+                    <span className="mt-1 block text-[10px] font-semibold text-[#0F6B45]">
+                      {m.practiceStreak}/{RESOLVE_STREAK} correct in a row, nearly resolved
+                    </span>
+                  )}
                 </button>
               ))
             )}

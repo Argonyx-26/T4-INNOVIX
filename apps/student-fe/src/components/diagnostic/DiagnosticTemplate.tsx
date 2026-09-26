@@ -20,7 +20,7 @@ export const StepCard: React.FC<StepCardProps> = ({ step, title, subtitle, onRes
       <div className="flex items-start gap-3 min-w-0">
         <span
           aria-hidden="true"
-          className="w-9 h-9 shrink-0 rounded-full bg-[#EDEDEC] grid place-items-center text-xs font-bold text-[#1F1F1F]"
+          className="w-9 h-9 shrink-0 rounded-full bg-fill-2 grid place-items-center text-xs font-bold text-[#1F1F1F]"
         >
           {step === "done" ? <Check className="w-4 h-4" strokeWidth={3} /> : String(step).padStart(2, "0")}
         </span>
@@ -35,7 +35,7 @@ export const StepCard: React.FC<StepCardProps> = ({ step, title, subtitle, onRes
         {headerExtra}
         <button
           onClick={onReset}
-          className="h-9 px-3.5 rounded-full bg-[#EDEDEC] hover:bg-[#E2E2E0] text-xs font-semibold text-[#1F1F1F] flex items-center gap-1.5 transition"
+          className="h-9 px-3.5 rounded-full bg-fill-2 hover:bg-fill-hover text-xs font-semibold text-[#1F1F1F] flex items-center gap-1.5 transition"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           Restart
@@ -52,7 +52,7 @@ export const StepCard: React.FC<StepCardProps> = ({ step, title, subtitle, onRes
 const CHIP_TONES = {
   green: "bg-[#C9F0DC] text-[#0F6B45]",
   red: "bg-[#FAD4D4] text-[#8F1D1D]",
-  purple: "bg-[#E5DEFD] text-[#4B32B8]",
+  purple: "bg-brand-soft text-brand-ink",
   amber: "bg-[#FDECC0] text-[#7C5300]",
 };
 
@@ -91,8 +91,8 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({ label, state = "idle
         : state === "wrong"
         ? "border-[#EF4444] bg-[#FDECEC] text-[#8F1D1D]"
         : state === "selected"
-        ? "border-[#8266F0] bg-[#F3F0FF] text-[#2A1B6B] ring-2 ring-[#8266F0]/30"
-        : "border-[#E3E3E1] bg-white text-[#1F1F1F] hover:border-[#8266F0] hover:bg-[#F7F5FF] disabled:opacity-60"
+        ? "border-brand bg-brand-faint text-[#2A1B6B] ring-2 ring-brand/30"
+        : "border-[#E3E3E1] bg-white text-[#1F1F1F] hover:border-brand hover:bg-brand-faint disabled:opacity-60"
     }`}
   >
     {label}
@@ -126,7 +126,7 @@ export const LearnerModelPanel: React.FC<{ model: LearnerModelView | null; loadi
     <section aria-labelledby="learner-model-title" className="rounded-[28px] bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
       <div className="flex items-center justify-between pb-3 border-b border-black/10">
         <h2 id="learner-model-title" className="font-sans flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[#141414]">
-          <TrendingUp className="w-4 h-4 text-[#8266F0]" />
+          <TrendingUp className="w-4 h-4 text-brand" />
           Dynamic Learner Model
         </h2>
         <span className="w-2 h-2 rounded-full bg-[#22C55E]" title="Live" aria-label="Live" />
@@ -185,7 +185,7 @@ export const MistakeMemoryPanel: React.FC<{
     .slice()
     .sort((a, b) => (parseDate(b.lastAttempt)?.getTime() ?? 0) - (parseDate(a.lastAttempt)?.getTime() ?? 0));
   return (
-    <section aria-labelledby="memory-title" className="rounded-[28px] bg-[#E8E8E6] p-4">
+    <section aria-labelledby="memory-title" className="rounded-[28px] bg-fill-2 p-4">
       <h2 id="memory-title" className="font-sans flex items-center gap-2 px-1 pb-3 text-xs font-bold text-[#141414]">
         <AlertCircle className="w-4 h-4" />
         Learner Mistake Memory (30-Day Window)

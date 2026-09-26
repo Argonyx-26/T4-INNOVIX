@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
-import { Bot, Flag, Loader2 } from "lucide-react";
+import { Bot, Flag, Loader2, CheckCircle2 } from "lucide-react";
 import { db } from "../../firebase";
 import { AiMisconceptionRecord, AiTestAttempt, REPEAT_THRESHOLD } from "../../services/dataService";
 
@@ -43,17 +43,22 @@ export const AiTestInsights: React.FC = () => {
     };
   }, []);
 
+  // Resolved misconceptions drop off the flag list: students aren't labelled by outdated mistakes.
   const flagged = useMemo(
-    () => records.filter((r) => r.attemptCount >= REPEAT_THRESHOLD).sort((a, b) => b.attemptCount - a.attemptCount),
+    () => records.filter((r) => r.attemptCount >= REPEAT_THRESHOLD && r.status !== "Resolved").sort((a, b) => b.attemptCount - a.attemptCount),
+    [records]
+  );
+  const recentlyResolved = useMemo(
+    () => records.filter((r) => r.status === "Resolved" && r.attemptCount >= REPEAT_THRESHOLD),
     [records]
   );
   const flaggedStudents = new Set(flagged.map((r) => r.studentId)).size;
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-      <section aria-labelledby="ai-flags-title" className="xl:col-span-3 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm">
+      <section aria-labelledby="ai-flags-title" className="xl:col-span-3 rounded-[28px] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="ai-flags-title" className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white">
+          <h3 id="ai-flags-title" className="flex items-center gap-2 font-bold text-[#1F2230]">
             <Flag className="w-4 h-4 text-rose-500" />
             Repeated Misconceptions from AI Tests
           </h3>
@@ -62,7 +67,7 @@ export const AiTestInsights: React.FC = () => {
           </span>
         </div>
         <p className="mt-1 text-xs text-neutral-500">
-          Students appear here after making the same mistake {REPEAT_THRESHOLD}+ times in AI-generated tests.
+          Students appear here after making the same mistake {REPEAT_THRESHOLD}+ times in AI tests or practice, and leave once they resolve it.
         </p>
 
         <div className="mt-4 space-y-2.5" aria-live="polite">
@@ -71,39 +76,47 @@ export const AiTestInsights: React.FC = () => {
           ) : error ? (
             <p className="text-sm text-rose-600">{error}</p>
           ) : flagged.length === 0 ? (
-            <p className="rounded-2xl bg-black/5 dark:bg-white/5 px-4 py-3 text-sm text-neutral-500">No repeated misconceptions yet.</p>
+            <p className="rounded-2xl bg-black/5 dark:bg-white/5 px-5 py-4 text-sm text-neutral-500">No repeated misconceptions yet.</p>
           ) : (
             flagged.map((r) => (
-              <div key={r.id} className="rounded-2xl border border-black/5 dark:border-white/10 bg-neutral-50 dark:bg-[#17171B] px-4 py-3 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-bold text-neutral-900 dark:text-white">{r.identifiedMisconception}</div>
-                  <div className="text-xs text-neutral-500">
-                    <span className="font-semibold text-neutral-700 dark:text-neutral-300">{r.studentName}</span> · {r.conceptName} · last seen {ago(r.lastAttempt)}
+              <div key={r.id} className="rounded-2xl border border-black/5 dark:border-white/10 bg-neutral-50 dark:bg-white/5 px-5 sm:px-6 py-4 flex items-start justify-between gap-4 transition hover:bg-neutral-100/70 dark:hover:bg-white/10">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold text-[#1F2230] dark:text-white">{r.identifiedMisconception}</div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-200">{r.studentName}</span> · {r.conceptName} · last seen {ago(r.lastAttempt)}
                   </div>
-                  {r.explanation && <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{r.explanation}</p>}
+                  {r.explanation && <p className="mt-1.5 text-xs text-neutral-600 dark:text-slate-300 leading-relaxed">{r.explanation}</p>}
                 </div>
-                <span className="shrink-0 rounded-full bg-rose-500/15 px-2.5 py-1 text-xs font-bold text-rose-600">{r.attemptCount}×</span>
+                <span className="shrink-0 text-right">
+                  <span className="block rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-600 dark:text-rose-400">{r.attemptCount}×</span>
+                  {r.status !== "Detected" && <span className="mt-1 block text-[10px] font-semibold text-amber-600 dark:text-amber-400">{r.status}</span>}
+                </span>
               </div>
             ))
           )}
         </div>
+        {recentlyResolved.length > 0 && (
+          <p className="mt-4 text-xs text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="inline w-4 h-4 -mt-0.5 mr-1" aria-hidden="true" />Resolved through targeted practice: {recentlyResolved.map((r) => `${r.studentName} (${r.identifiedMisconception})`).join(", ")}
+          </p>
+        )}
       </section>
 
-      <section aria-labelledby="ai-attempts-title" className="xl:col-span-2 rounded-3xl bg-white dark:bg-[#1E1E24] border border-black/5 dark:border-white/10 p-6 shadow-sm">
-        <h3 id="ai-attempts-title" className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white">
-          <Bot className="w-4 h-4 text-[#8266F0]" /> Recent AI Tests
+      <section aria-labelledby="ai-attempts-title" className="xl:col-span-2 rounded-[28px] bg-white dark:bg-[#1E1E24] p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-black/5 dark:border-white/10">
+        <h3 id="ai-attempts-title" className="flex items-center gap-2 font-bold text-[#1F2230] dark:text-white">
+          <Bot className="w-4 h-4 text-brand" /> Recent AI Tests
         </h3>
         <div className="mt-4 space-y-2.5">
           {attempts.length === 0 ? (
-            <p className="rounded-2xl bg-black/5 dark:bg-white/5 px-4 py-3 text-sm text-neutral-500">No AI tests taken yet.</p>
+            <p className="rounded-2xl bg-black/5 dark:bg-white/5 px-5 py-4 text-sm text-neutral-500">No AI tests taken yet.</p>
           ) : (
             attempts.map((a) => {
               const pct = Math.round((a.score / Math.max(1, a.total)) * 100);
               return (
-                <div key={a.id} className="flex items-center justify-between gap-3 rounded-2xl bg-neutral-50 dark:bg-[#17171B] px-4 py-3">
+                <div key={a.id} className="flex items-center justify-between gap-4 rounded-2xl bg-neutral-50 dark:bg-white/5 border border-black/5 dark:border-white/10 px-5 sm:px-6 py-4">
                   <div className="min-w-0">
-                    <div className="text-sm font-bold text-neutral-900 dark:text-white truncate">{a.studentName}</div>
-                    <div className="text-xs text-neutral-500 truncate">
+                    <div className="text-sm font-bold text-[#1F2230] dark:text-white truncate">{a.studentName}</div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
                       {a.topic} · {a.difficulty} · {ago(a.createdAt)}
                       {a.misconceptions.length > 0 && ` · ${a.misconceptions.length} misconception${a.misconceptions.length === 1 ? "" : "s"}`}
                     </div>

@@ -40,10 +40,20 @@ DISCIPLINES = [
     "Law & Humanities",
     "Natural Sciences",
 ]
-TEST_TTL_SECONDS = 3 * 60 * 60
+# Long enough for students to leave and resume an unfinished test later.
+TEST_TTL_SECONDS = 7 * 24 * 60 * 60
 MAX_CHAT_MESSAGES = 30
 MAX_MESSAGE_CHARS = 4000
 OPTION_IDS = ["A", "B", "C", "D"]
+
+# Emoji and pictographic symbols (dingbats, stars, check marks). Arrows and maths symbols are kept.
+EMOJI_RE = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B50\u2B55\uFE0F\u200D]")
+NO_EMOJI_RULE = "\nNever use emojis, emoticons or decorative symbols in your output."
+
+
+def strip_emoji(text: str) -> str:
+    return re.sub(r"[ \t]{2,}", " ", EMOJI_RE.sub("", text))
+
 
 TUTOR_SYSTEM_PROMPT = (
     "You are Eduvia's AI tutor for school and university students. Teach clearly and patiently: "
@@ -143,9 +153,10 @@ PROVIDERS = [("gemini", _call_gemini), ("groq", _call_groq)]
 def call_llm(system: str, messages: list, json_mode: bool = False):
     """Returns (text, provider_name), trying each configured provider in turn."""
     problems, rate_limited = [], False
+    system = system + NO_EMOJI_RULE
     for name, fn in PROVIDERS:
         try:
-            return fn(system, messages, json_mode), name
+            return strip_emoji(fn(system, messages, json_mode)), name
         except LLMUnavailable as exc:
             problems.append(f"{name}: {exc}")
         except ProviderRateLimited as exc:
@@ -202,7 +213,7 @@ def _unseal(token: str) -> dict:
 # Validation helpers
 # ---------------------------------------------------------------------------
 def _clean_text(value, limit: int) -> str:
-    return re.sub(r"\s+", " ", str(value or "")).strip()[:limit]
+    return re.sub(r"\s+", " ", strip_emoji(str(value or ""))).strip()[:limit]
 
 
 def _slug(value: str) -> str:
@@ -298,6 +309,8 @@ class TutorTestGenerateView(APIView):
 
     def post(self, request, *args, **kwargs):
         topic = _clean_text(request.data.get("topic"), 120)
+        subject = str(request.data.get("subject") or "")
+        subject = subject if subject in DISCIPLINES else ""
         difficulty = str(request.data.get("difficulty", "")).lower()
         try:
             count = int(request.data.get("count", 5))
@@ -323,7 +336,9 @@ class TutorTestGenerateView(APIView):
         )
         prompt = (
             f"Write {count} {difficulty} multiple-choice questions on the topic given below.\n"
-            f"Topic: {json.dumps(topic)}\n\n"
+            f"Topic: {json.dumps(topic)}\n"
+            + (f"Subject: {subject}\n" if subject else "")
+            + "\n"
             "Rules:\n"
             "- Exactly 4 options per question and exactly one correct option.\n"
             "- Each incorrect option carries a misconception with a short kebab-case 'key', a student-friendly 'title' "
@@ -346,7 +361,7 @@ class TutorTestGenerateView(APIView):
 
         # One retry if too few usable questions come back; the best attempt wins, so a failed
         # retry (e.g. rate limit) never throws away a usable first batch.
-        questions, discipline, provider = [], "Natural Sciences", None
+        questions, discipline, provider = [], subject or "Natural Sciences", None
         for _attempt in range(2):
             try:
                 text, used = call_llm(system, [{"role": "user", "content": prompt}], json_mode=True)
@@ -361,7 +376,7 @@ class TutorTestGenerateView(APIView):
             candidate = _normalise_questions(raw)[:count]
             if len(candidate) > len(questions):
                 questions, provider = candidate, used
-                if raw.get("discipline") in DISCIPLINES:
+                if not subject and raw.get("discipline") in DISCIPLINES:
                     discipline = raw["discipline"]
             if len(questions) >= max(3, int(count * 0.6)):
                 break

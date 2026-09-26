@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import { 
-  CheckCircle2, Clock, Lock, Sparkles, ArrowRight, ShieldCheck, 
-  Award, BookOpen, Layers, Milestone, ChevronRight, Zap
-} from "lucide-react";
+import { CheckCircle2, Clock, Lock, Sparkles, ArrowRight, ShieldCheck, Award, BookOpen, Layers, Milestone, ChevronRight, Zap, Star } from "lucide-react";
 import { useThemeMode } from "../context/ThemeModeContext";
 
 interface StageDetail {
@@ -124,14 +121,14 @@ export const LearningPath: React.FC = () => {
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       {/* Header section */}
       <div className="mb-10 text-center max-w-3xl mx-auto">
-        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#8266F0]/10 text-[#8266F0] font-semibold text-xs tracking-wider uppercase mb-4 border border-[#8266F0]/20">
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-brand/10 text-brand font-semibold text-xs tracking-wider uppercase mb-4 border border-brand/20">
           <Milestone className="w-3.5 h-3.5" />
           <span>Cognitive Progression Architecture</span>
         </div>
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 font-display mb-4">
           5-Stage Learning Paths
         </h1>
-        <p className="text-neutral-600 dark:text-neutral-400 text-base sm:text-lg leading-relaxed">
+        <p className="adhd-hide text-neutral-600 dark:text-neutral-400 text-base sm:text-lg leading-relaxed">
           A structured conceptual roadmap that prevents fragmented learning. Every stage builds on prerequisite confidence verified through AI diagnostic loops.
         </p>
       </div>
@@ -143,7 +140,7 @@ export const LearningPath: React.FC = () => {
             <h2 className="text-lg sm:text-xl font-bold font-display text-neutral-900 dark:text-white">
               Curriculum Milestone Roadmap
             </h2>
-            <p className="text-xs sm:text-sm text-neutral-500">
+            <p className="adhd-hide text-xs sm:text-sm text-neutral-500">
               Click any stage to inspect concept dependencies and prerequisite verification.
             </p>
           </div>
@@ -152,8 +149,8 @@ export const LearningPath: React.FC = () => {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
               <span>1 Completed</span>
             </span>
-            <span className="flex items-center space-x-1.5 text-[#8266F0]">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#8266F0] animate-pulse"></span>
+            <span className="flex items-center space-x-1.5 text-brand">
+              <span className="w-2.5 h-2.5 rounded-full bg-brand animate-pulse"></span>
               <span>1 Active</span>
             </span>
             <span className="flex items-center space-x-1.5 text-neutral-400">
@@ -178,7 +175,7 @@ export const LearningPath: React.FC = () => {
               );
             } else if (stage.status === "active") {
               statusBadge = (
-                <div className="flex items-center space-x-1 text-[#8266F0] text-[11px] font-bold">
+                <div className="flex items-center space-x-1 text-brand text-[11px] font-bold">
                   <Zap className="w-3.5 h-3.5" />
                   <span>Active Diagnostic</span>
                 </div>
@@ -205,7 +202,7 @@ export const LearningPath: React.FC = () => {
                 onClick={() => setSelectedStageId(stage.id)}
                 className={`p-4 rounded-2xl text-left transition-all duration-200 border flex flex-col justify-between ${
                   isSelected
-                    ? "bg-[#8266F0]/10 border-[#8266F0] shadow-md ring-2 ring-[#8266F0]/20"
+                    ? "bg-brand/10 border-brand shadow-md ring-2 ring-brand/20"
                     : "bg-neutral-50 dark:bg-white/5 border-black/5 dark:border-white/10 hover:border-black/20 dark:hover:border-white/20"
                 }`}
               >
@@ -232,7 +229,7 @@ export const LearningPath: React.FC = () => {
                         stage.status === "completed"
                           ? "bg-emerald-500"
                           : stage.status === "active"
-                          ? "bg-[#8266F0]"
+                          ? "bg-brand"
                           : "bg-neutral-400"
                       }`}
                       style={{ width: `${stage.masteryPercentage}%` }}
@@ -252,7 +249,7 @@ export const LearningPath: React.FC = () => {
           <div className="bg-white dark:bg-[#1E1E24] rounded-3xl p-6 sm:p-8 border border-black/5 dark:border-white/10 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex items-center space-x-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#8266F0]/10 text-[#8266F0]">
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-brand/10 text-brand">
                   {selectedStage.number}
                 </span>
                 <span className="text-xs text-neutral-400 font-medium">
@@ -273,7 +270,7 @@ export const LearningPath: React.FC = () => {
             <h2 className="text-2xl sm:text-3xl font-bold font-display text-neutral-900 dark:text-white mb-3">
               {selectedStage.title}
             </h2>
-            <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed mb-6">
+            <p className="adhd-clamp text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed mb-6">
               {selectedStage.description}
             </p>
 
@@ -323,7 +320,7 @@ export const LearningPath: React.FC = () => {
           {/* Prerequisites Card */}
           <div className="bg-white dark:bg-[#1E1E24] rounded-3xl p-6 border border-black/5 dark:border-white/10 shadow-sm">
             <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-neutral-400 mb-4">
-              <Layers className="w-4 h-4 text-[#8266F0]" />
+              <Layers className="w-4 h-4 text-brand" />
               <span>Prerequisite Concepts Map</span>
             </div>
             <div className="space-y-2">
@@ -337,7 +334,7 @@ export const LearningPath: React.FC = () => {
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-neutral-500 mt-4 leading-normal">
+            <p className="adhd-hide text-[11px] text-neutral-500 mt-4 leading-normal">
               LearnLens validates all prerequisite foundations prior to unlocking advanced stages to prevent cumulative learning loss.
             </p>
           </div>
@@ -353,7 +350,7 @@ export const LearningPath: React.FC = () => {
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mt-1">
               {selectedStage.badgeName}
             </h3>
-            <p className="text-xs text-neutral-500 mt-2 mb-4">
+            <p className="adhd-hide text-xs text-neutral-500 mt-2 mb-4">
               Awarded upon achieving ≥85% isomorphic retention across all sub-concepts and zero recurring sign errors.
             </p>
             <div className={`py-2 px-4 rounded-xl text-xs font-bold uppercase tracking-wider inline-block ${
@@ -361,7 +358,7 @@ export const LearningPath: React.FC = () => {
                 ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
                 : "bg-neutral-100 dark:bg-white/5 text-neutral-400"
             }`}>
-              {selectedStage.badgeEarned ? "★ Credential Earned" : "In Progress (88%)"}
+              {selectedStage.badgeEarned ? <><Star className="inline w-3.5 h-3.5 -mt-0.5 mr-1 fill-current" aria-hidden="true" />Credential Earned</> : "In Progress (88%)"}
             </div>
           </div>
         </div>
