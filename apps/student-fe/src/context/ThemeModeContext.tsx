@@ -205,58 +205,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Preferred: the backend proxy, which holds the Cartesia key server-side.
     if (await playFromTtsProxy(text)) return;
 
-    const cartesiaKey = import.meta.env.VITE_CARTESIA_API_KEY;
-
-    if (cartesiaKey) {
-      try {
-        const response = await fetch("https://api.cartesia.ai/tts/bytes", {
-          method: "POST",
-          headers: {
-            "Cartesia-Version": "2024-06-10",
-            "X-API-Key": cartesiaKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model_id: "sonic-2",
-            transcript: text,
-            voice: {
-              mode: "id",
-              id: "694f9389-aac1-45b6-b726-9d9369183238", // Warm, friendly female voice
-            },
-            output_format: {
-              container: "mp3",
-              bit_rate: 128000,
-              sample_rate: 44100,
-            },
-            language: "en",
-          }),
-        });
-
-        if (!response.ok) {
-          console.warn("[Cartesia] API response not OK:", response.status, ". Falling back to browser TTS.");
-          fallbackBrowserSpeak(text);
-          return;
-        }
-
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.playbackRate = mode === "dyslexic" ? 0.9 : 1.0;
-        cartesiaAudioRef.current = audio;
-
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          cartesiaAudioRef.current = null;
-        };
-
-        await audio.play();
-      } catch (err) {
-        console.warn("[Cartesia] TTS request failed, falling back to browser:", err);
-        fallbackBrowserSpeak(text);
-      }
-    } else {
-      fallbackBrowserSpeak(text);
-    }
+    // Otherwise the browser's built-in voice. (No direct Cartesia call: its key must stay on the server.)
+    fallbackBrowserSpeak(text);
   };
 
   const fallbackBrowserSpeak = (text: string) => {

@@ -28,30 +28,21 @@ export const SelfStudy: React.FC = () => {
     setIsUploading(true);
     
     try {
-      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'notes-portal';
-      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'diiauk0yb';
-      const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY || '215137723882992';
-      const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET || 'mszE6sSjkVsGAAqzY_a8ToTxbu8';
-      
-      const timestamp = Math.round((new Date()).getTime() / 1000).toString();
-      
-      // Generate SHA-1 signature
-      const strToSign = `timestamp=${timestamp}&upload_preset=${uploadPreset}${apiSecret}`;
-      const encoder = new TextEncoder();
-      const data = encoder.encode(strToSign);
-      const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      // The backend signs the upload so the Cloudinary secret never ships in the browser bundle.
+      const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const signRes = await fetch(`${apiBase}/uploads/cloudinary-signature/`, { method: "POST" });
+      const signed = await signRes.json().catch(() => ({}));
+      if (!signRes.ok) throw new Error(signed.error || "Could not prepare the upload.");
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', uploadPreset);
-      formData.append('api_key', apiKey);
-      formData.append('timestamp', timestamp);
-      formData.append('signature', signature);
-      
+      formData.append('upload_preset', signed.upload_preset);
+      formData.append('api_key', signed.api_key);
+      formData.append('timestamp', signed.timestamp);
+      formData.append('signature', signed.signature);
+
       // Upload using Cloudinary REST API (Signed)
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${signed.cloud_name}/auto/upload`, {
         method: 'POST',
         body: formData,
       });
